@@ -177,6 +177,24 @@ of erroring the page.
 
 Cards link to `/properties/[id]` — the detail page arrives in Phase 6.
 
+## Property detail page (Phase 6)
+
+`/properties/[id]` shows one listing: photo gallery (arrows, counter,
+thumbnails), key-details grid, description, amenities, a location box
+(Google Maps link when coordinates exist; the Leaflet map arrives in
+Phase 7), and a sticky sidebar with the price and the agent's contact
+card — the phone number stays masked until "Show phone number" is
+clicked, then Call/WhatsApp actions appear, next to anti-scam safety
+tips. Similar properties (same city + rent/sale, then region, then
+type) close the page, and title/OpenGraph metadata is generated per
+property. Only APPROVED listings resolve; pending/rejected/rented ids
+404 exactly like nonexistent ones.
+
+**Sandbox note:** if your dev environment has no outbound internet, the
+Next.js image optimizer can't fetch remote photos server-side and
+images appear broken. Set `NEXT_IMAGE_UNOPTIMIZED=1` in `.env` so
+browsers load them directly — never set it in production.
+
 ## Useful scripts
 
 | Command             | What it does                                        |
@@ -233,7 +251,7 @@ generation gets the same fallback automatically via
 - [x] **Phase 3 — Listing CRUD:** agent dashboard with own-listing CRUD, server-side ownership enforcement, PENDING default + status policy
 - [x] **Phase 4 — Image uploads (Cloudinary):** signed direct uploads with server-verified results, cover/reorder/delete, deletion sync, graceful unconfigured mode
 - [x] **Phase 5 — Public browsing & search:** home storefront + `/properties` with validated filters/sort/pagination, APPROVED-only visibility
-- [ ] Phase 6 — Property detail page
+- [x] **Phase 6 — Property detail page:** gallery, key details, agent contact reveal + WhatsApp, similar properties, APPROVED-only 404s
 - [ ] Phase 7 — Maps (Leaflet)
 - [ ] Phase 8 — In-app inquiries
 - [ ] Phase 9 — Favorites

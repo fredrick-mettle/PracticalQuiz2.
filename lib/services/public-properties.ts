@@ -118,3 +118,67 @@ export async function getHomeStats() {
   ]);
   return { total, forRent, forSale };
 }
+
+/**
+ * Full detail for one public property (detail page, Phase 6).
+ * APPROVED only — anything else returns null and the page 404s, exactly
+ * like the agent-side ownership rule: don't leak that a listing exists.
+ */
+export async function getPublicProperty(id: string) {
+  return prisma.property.findFirst({
+    where: { id, status: "APPROVED" },
+    include: {
+      images: { orderBy: { order: "asc" } },
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+}
+
+export type PublicPropertyDetail = NonNullable<
+  Awaited<ReturnType<typeof getPublicProperty>>
+>;
+
+/**
+ * Similar listings for the detail page: fill from same city + same
+ * rent/sale first, then same region, then same type. APPROVED only and
+ * never includes the property itself.
+ */
+export async function getSimilarProperties(
+  property: Pick<
+    PublicPropertyDetail,
+    "id" | "city" | "region" | "type" | "listingType"
+  >,
+  limit = 4
+): Promise<PublicPropertyCardData[]> {
+  const collected: PublicPropertyCardData[] = [];
+  const seen = new Set<string>([property.id]);
+
+  const tiers: Prisma.PropertyWhereInput[] = [
+    { city: property.city, listingType: property.listingType },
+    { region: property.region },
+    { type: property.type },
+  ];
+
+  for (const tier of tiers) {
+    if (collected.length >= limit) break;
+    const rows = await prisma.property.findMany({
+      where: { status: "APPROVED", id: { notIn: Array.from(seen) }, ...tier },
+      orderBy: { createdAt: "desc" },
+      take: limit - collected.length,
+      include: cardInclude,
+    });
+    for (const row of rows) {
+      seen.add(row.id);
+      collected.push(row);
+    }
+  }
+  return collected;
+}
