@@ -18,6 +18,8 @@ import { formatGHS } from "@/lib/utils";
 import { PropertyCard } from "@/components/properties/property-card";
 import { PropertiesMap } from "@/components/maps/properties-map";
 import { SearchBar } from "@/components/search/search-bar";
+import { getCurrentUser } from "@/lib/auth-helpers";
+import { getFavoriteIds } from "@/lib/services/favorites";
 
 export const metadata: Metadata = {
   title: "Browse Properties",
@@ -77,6 +79,11 @@ const VIEW_TOGGLE: { value: ViewMode; label: string }[] = [
 export default async function PropertiesPage({ searchParams }: PageProps) {
   const query = parseSearchParams(searchParams);
   const isMapView = query.view === "map";
+
+  const currentUser = await getCurrentUser();
+  const favoriteIds = new Set(
+    currentUser ? await getFavoriteIds(currentUser.id) : []
+  );
 
   const gridResult = !isMapView ? await searchProperties(query) : null;
   const mapResult = isMapView ? await getMapPins(query) : null;
@@ -246,7 +253,13 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
       ) : gridResult ? (
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {gridResult.properties.map((property) => (
-            <PropertyCard key={property.id} property={property} />
+            <PropertyCard
+              key={property.id}
+              property={property}
+              isFavorited={favoriteIds.has(property.id)}
+              isSignedIn={!!currentUser}
+              showFavorite={currentUser?.id !== property.ownerId}
+            />
           ))}
         </div>
       ) : null}

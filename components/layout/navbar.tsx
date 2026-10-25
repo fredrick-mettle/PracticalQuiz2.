@@ -54,6 +54,14 @@ export async function Navbar() {
           >
             Browse Properties
           </Link>
+          {user && (
+            <Link
+              href="/favorites"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+            >
+              Saved
+            </Link>
+          )}
           {roleLink && (
             <Link
               href={roleLink.href}

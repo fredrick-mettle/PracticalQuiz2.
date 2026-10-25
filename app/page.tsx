@@ -9,6 +9,7 @@ import {
 import { GHANA_REGIONS } from "@/lib/constants";
 import { EMPTY_SEARCH_QUERY, propertiesHref } from "@/lib/validations/search";
 import { PropertyCard } from "@/components/properties/property-card";
+import { getFavoriteIds } from "@/lib/services/favorites";
 import { SearchBar } from "@/components/search/search-bar";
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default async function HomePage() {
     getRegionCounts(),
     getCurrentUser(),
   ]);
+  const favoriteIds = new Set(user ? await getFavoriteIds(user.id) : []);
 
   const capitalOf = (regionName: string) =>
     GHANA_REGIONS.find((r) => r.name === regionName)?.capital;
@@ -95,7 +97,13 @@ export default async function HomePage() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {featured.map((property) => (
-              <PropertyCard key={property.id} property={property} />
+              <PropertyCard
+                key={property.id}
+                property={property}
+                isFavorited={favoriteIds.has(property.id)}
+                isSignedIn={!!user}
+                showFavorite={user?.id !== property.ownerId}
+              />
             ))}
           </div>
         )}

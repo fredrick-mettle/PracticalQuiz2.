@@ -245,6 +245,17 @@ migration file was authored by hand and applied with `migrate deploy`
 (the WASM shim can't run shadow-database diagnostics); on a normal
 machine `npm run db:migrate` generates the identical SQL.
 
+## Favorites (Phase 9)
+
+Signed-in users save properties with the heart on every card (home,
+search, similar) or the "Save this property" button on the detail
+page; everything lives at `/favorites`, newest saves first. Toggling
+is optimistic, guests are bounced through login and back, and you
+can't save your own listings. If a saved property is later rented,
+sold or unpublished it moves to a "No longer available" section
+instead of vanishing — unsaving always works, even then; deleted
+properties cascade their saves away.
+
 ## Useful scripts
 
 | Command             | What it does                                        |
@@ -304,7 +315,7 @@ generation gets the same fallback automatically via
 - [x] **Phase 6 — Property detail page:** gallery, key details, agent contact reveal + WhatsApp, similar properties, APPROVED-only 404s
 - [x] **Phase 7 — Maps (Leaflet/OpenStreetMap):** detail-page pin, search map view with price-pill pins + popups, form pin-picker synced with lat/lng fields
 - [x] **Phase 8 — Inquiries & email:** threaded tenant/agent inboxes, NEW→READ→REPLIED→CLOSED flow, Resend notifications (graceful unconfigured mode)
-- [ ] Phase 9 — Favorites
+- [x] **Phase 9 — Favorites:** optimistic heart toggles everywhere, saved-properties page with no-longer-available handling
 - [ ] Phase 10 — Admin panel
 - [ ] Phase 11 — Security & quality
 - [ ] Phase 12 — Deployment

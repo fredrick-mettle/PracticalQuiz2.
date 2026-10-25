@@ -19,6 +19,8 @@ import { PropertyMap } from "@/components/maps/property-map";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getOpenInquiryFor } from "@/lib/services/inquiries";
 import { InquiryForm } from "@/components/inquiries/inquiry-form";
+import { getFavoriteIds } from "@/lib/services/favorites";
+import { FavoriteButton } from "@/components/properties/favorite-button";
 
 interface PageProps {
   params: { id: string };
@@ -65,6 +67,9 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     currentUser && !isOwner
       ? await getOpenInquiryFor(currentUser.id, property.id)
       : null;
+  const favoriteIds = new Set(
+    currentUser ? await getFavoriteIds(currentUser.id) : []
+  );
 
   const listedOn = property.createdAt.toLocaleDateString("en-GB", {
     day: "numeric",
@@ -243,6 +248,16 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 {pricePeriodSuffix(property.pricePeriod)}
               </span>
             </p>
+            {!isOwner && (
+              <div className="mt-4">
+                <FavoriteButton
+                  propertyId={property.id}
+                  initialFavorited={favoriteIds.has(property.id)}
+                  isSignedIn={!!currentUser}
+                  variant="full"
+                />
+              </div>
+            )}
             <div className="my-5 border-t border-slate-100" />
             <AgentContactCard
               name={property.owner.name}
@@ -337,7 +352,13 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {similar.map((item) => (
-              <PropertyCard key={item.id} property={item} />
+              <PropertyCard
+                key={item.id}
+                property={item}
+                isFavorited={favoriteIds.has(item.id)}
+                isSignedIn={!!currentUser}
+                showFavorite={currentUser?.id !== item.ownerId}
+              />
             ))}
           </div>
         </section>

@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
  */
 const AGENT_PREFIXES = ["/dashboard"];
 const ADMIN_PREFIXES = ["/admin"];
-const AUTH_PREFIXES = ["/profile", "/inquiries"];
+const AUTH_PREFIXES = ["/profile", "/inquiries", "/favorites"];
 
 function matchesPrefix(pathname: string, prefixes: string[]): boolean {
   return prefixes.some(
@@ -58,5 +58,6 @@ export const config = {
     "/admin/:path*",
     "/profile/:path*",
     "/inquiries/:path*",
+    "/favorites/:path*",
   ],
 };

@@ -17,6 +17,9 @@ const cardInclude = {
   _count: { select: { images: true } },
 } satisfies Prisma.PropertyInclude;
 
+/** Shared with the favorites service so saved cards render identically. */
+export const propertyCardInclude = cardInclude;
+
 function buildWhere(query: PropertySearchQuery): Prisma.PropertyWhereInput {
   const insensitive = (value: string) => ({
     contains: value,
