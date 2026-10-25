@@ -15,6 +15,7 @@ import { EMPTY_SEARCH_QUERY, propertiesHref } from "@/lib/validations/search";
 import { PropertyCard } from "@/components/properties/property-card";
 import { PropertyGallery } from "@/components/properties/gallery";
 import { AgentContactCard } from "@/components/properties/agent-contact-card";
+import { PropertyMap } from "@/components/maps/property-map";
 
 interface PageProps {
   params: { id: string };
@@ -186,27 +187,37 @@ export default async function PropertyDetailPage({ params }: PageProps) {
 
           <section>
             <h2 className="mb-3 text-xl font-bold text-slate-900">Location</h2>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
-              <p className="font-medium text-slate-800">{whereLine(property)}</p>
-              {hasCoords ? (
-                <p className="mt-1 text-sm text-slate-600">
-                  Exact location provided by the agent.{" "}
+            {hasCoords ? (
+              <>
+                <PropertyMap
+                  latitude={property.latitude as number}
+                  longitude={property.longitude as number}
+                  label={property.title}
+                />
+                <p className="mt-3 text-sm text-slate-600">
+                  {whereLine(property)} · The pin shows the approximate area —
+                  the agent will confirm the exact location.{" "}
                   <a
                     href={`https://www.google.com/maps?q=${property.latitude},${property.longitude}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold text-emerald-700 hover:underline"
                   >
-                    View approximate location on Google Maps ↗
+                    Open in Google Maps ↗
                   </a>
                 </p>
-              ) : (
+              </>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+                <p className="font-medium text-slate-800">
+                  {whereLine(property)}
+                </p>
                 <p className="mt-1 text-sm text-slate-600">
                   The agent will share the exact location and arrange a
                   viewing when you get in touch.
                 </p>
-              )}
-            </div>
+              </div>
+            )}
           </section>
         </div>
 

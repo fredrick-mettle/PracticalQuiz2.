@@ -23,6 +23,7 @@ import {
   createPropertyAction,
   updatePropertyAction,
 } from "@/lib/actions/properties";
+import { LocationPicker } from "@/components/maps/location-picker";
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
@@ -99,6 +100,8 @@ export function PropertyForm({ propertyId, initialValues }: Props) {
   const propertyType = watch("type");
   const listingType = watch("listingType");
   const region = watch("region");
+  const latitudeValue = watch("latitude");
+  const longitudeValue = watch("longitude");
 
   const showBedrooms = propertyType !== "LAND" && propertyType !== "COMMERCIAL";
   const showBathrooms = propertyType !== "LAND";
@@ -389,6 +392,33 @@ export function PropertyForm({ propertyId, initialValues }: Props) {
           </div>
         </div>
 
+        <div>
+          <span className={labelClass}>Map location (optional)</span>
+          <LocationPicker
+            latitude={
+              typeof latitudeValue === "number" && !Number.isNaN(latitudeValue)
+                ? latitudeValue
+                : null
+            }
+            longitude={
+              typeof longitudeValue === "number" &&
+              !Number.isNaN(longitudeValue)
+                ? longitudeValue
+                : null
+            }
+            onChange={(lat, lng) => {
+              setValue("latitude", lat, {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
+              setValue("longitude", lng, {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
+            }}
+          />
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="latitude" className={labelClass}>
@@ -426,8 +456,8 @@ export function PropertyForm({ propertyId, initialValues }: Props) {
           </div>
         </div>
         <p className="text-xs text-slate-500">
-          Tip: you can leave the coordinates blank for now — a map pin picker
-          is coming in Phase 7.
+          Drop a pin so your listing appears on the property map — or type
+          the coordinates if you know them. You can also leave both blank.
         </p>
       </Section>
 

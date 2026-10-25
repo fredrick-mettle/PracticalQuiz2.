@@ -74,6 +74,7 @@ export function SearchBar({
       propertiesHref({
         ...EMPTY_SEARCH_QUERY,
         sort: initialQuery.sort,
+        view: initialQuery.view,
         q: q.trim() || undefined,
         region: region || undefined,
         city: city.trim() || undefined,

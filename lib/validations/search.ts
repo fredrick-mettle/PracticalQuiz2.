@@ -10,7 +10,7 @@ import type {
 } from "@/lib/generated/prisma/enums";
 
 /**
- * Public property search parameters (Phase 5).
+ * Public property search parameters (Phase 5; map view added in Phase 7).
  *
  * URL search params are untrusted strings: `parseSearchParams` coerces and
  * validates them into a typed query, silently dropping anything invalid
@@ -27,6 +27,8 @@ export const SORT_LABELS: Record<SortOption, string> = {
   "price-desc": "Price: high to low",
 };
 
+export type ViewMode = "grid" | "map";
+
 export interface PropertySearchQuery {
   q?: string;
   region?: string;
@@ -38,11 +40,13 @@ export interface PropertySearchQuery {
   minBedrooms?: number;
   sort: SortOption;
   page: number;
+  view: ViewMode;
 }
 
 export const EMPTY_SEARCH_QUERY: PropertySearchQuery = {
   sort: "newest",
   page: 1,
+  view: "grid",
 };
 
 type RawParams = Record<string, string | string[] | undefined>;
@@ -97,6 +101,7 @@ export function parseSearchParams(raw: RawParams): PropertySearchQuery {
     minBedrooms: parseBoundedInt(first(raw, "bedrooms"), 1, 20),
     sort: sort.success ? sort.data : "newest",
     page: parseBoundedInt(first(raw, "page"), 1, 10_000) ?? 1,
+    view: first(raw, "view") === "map" ? "map" : "grid",
   };
 }
 
@@ -119,6 +124,7 @@ export function propertiesHref(
   if (merged.maxPrice) sp.set("maxPrice", String(merged.maxPrice));
   if (merged.minBedrooms) sp.set("bedrooms", String(merged.minBedrooms));
   if (merged.sort !== "newest") sp.set("sort", merged.sort);
+  if (merged.view === "map") sp.set("view", "map");
   if (merged.page > 1) sp.set("page", String(merged.page));
   const qs = sp.toString();
   return qs ? `/properties?${qs}` : "/properties";

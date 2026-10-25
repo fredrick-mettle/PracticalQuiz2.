@@ -182,3 +182,43 @@ export async function getSimilarProperties(
   }
   return collected;
 }
+
+/**
+ * Lightweight pins for the /properties map view (Phase 7): every APPROVED
+ * listing matching the filters that has coordinates (capped at 100),
+ * plus the full match count so the UI can say how many aren't mappable.
+ */
+export async function getMapPins(query: PropertySearchQuery) {
+  const where = buildWhere(query);
+  const [total, rows] = await Promise.all([
+    prisma.property.count({ where }),
+    prisma.property.findMany({
+      where: { ...where, latitude: { not: null }, longitude: { not: null } },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        pricePeriod: true,
+        area: true,
+        city: true,
+        latitude: true,
+        longitude: true,
+        images: { orderBy: { order: "asc" }, take: 1, select: { url: true } },
+      },
+    }),
+  ]);
+
+  // Narrow number|null → number for the map component.
+  const pins = rows.flatMap((row) =>
+    row.latitude != null && row.longitude != null
+      ? [{ ...row, latitude: row.latitude, longitude: row.longitude }]
+      : []
+  );
+  return { pins, total, mapped: pins.length };
+}
+
+export type PropertyMapPin = Awaited<
+  ReturnType<typeof getMapPins>
+>["pins"][number];

@@ -195,6 +195,25 @@ Next.js image optimizer can't fetch remote photos server-side and
 images appear broken. Set `NEXT_IMAGE_UNOPTIMIZED=1` in `.env` so
 browsers load them directly — never set it in production.
 
+## Maps (Phase 7)
+
+Leaflet + OpenStreetMap (no API key needed), loaded lazily in the browser:
+
+- **Detail page** — a pin at the property's coordinates (scroll-zoom
+  unlocks on click so the map never traps page scrolling) with an
+  "Open in Google Maps" link alongside.
+- **Search** — Grid ⇄ Map toggle on `/properties` (`?view=map`): every
+  matching APPROVED listing that has coordinates becomes a price-pill
+  pin (capped at 100); click one for a mini card linking to the detail
+  page. The header notes how many matches have no pin yet.
+- **Listing form** — a click/drag pin picker with "Use my current
+  location", synced both ways with the numeric latitude/longitude
+  fields, which stay validated to Ghana's bounding box.
+
+Markers are pure-CSS pins (`divIcon`s) to dodge Leaflet's fragile
+default marker images, and all popup text is HTML-escaped. Map tiles
+load browser-side, so maps work even in offline dev sandboxes.
+
 ## Useful scripts
 
 | Command             | What it does                                        |
@@ -252,7 +271,7 @@ generation gets the same fallback automatically via
 - [x] **Phase 4 — Image uploads (Cloudinary):** signed direct uploads with server-verified results, cover/reorder/delete, deletion sync, graceful unconfigured mode
 - [x] **Phase 5 — Public browsing & search:** home storefront + `/properties` with validated filters/sort/pagination, APPROVED-only visibility
 - [x] **Phase 6 — Property detail page:** gallery, key details, agent contact reveal + WhatsApp, similar properties, APPROVED-only 404s
-- [ ] Phase 7 — Maps (Leaflet)
+- [x] **Phase 7 — Maps (Leaflet/OpenStreetMap):** detail-page pin, search map view with price-pill pins + popups, form pin-picker synced with lat/lng fields
 - [ ] Phase 8 — In-app inquiries
 - [ ] Phase 9 — Favorites
 - [ ] Phase 10 — Admin panel
