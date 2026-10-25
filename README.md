@@ -96,6 +96,37 @@ via `requireRole()` in `lib/auth-helpers.ts`. After login, admins land on
 `/admin`, agents on `/dashboard`, tenants on `/` (or the page they were
 trying to visit). Suspended/banned accounts cannot sign in.
 
+## Agent listing management (Phase 3)
+
+Agents manage their properties from `/dashboard`: a paginated list of their
+own listings with status filter tabs (All / Approved / Pending review /
+Rejected / Rented or Sold) and title search. Create/edit use a shared form
+(`components/properties/property-form.tsx`) validated by one Zod schema
+(`lib/validations/property.ts`) on both client and server; mutations are
+Server Actions over `lib/services/properties.ts`.
+
+**Ownership is enforced on the server for every operation** — all queries are
+scoped by `ownerId`, there is no code path that updates or deletes by
+property id alone, and opening another agent's edit page returns **404**
+(not 403) so listing existence isn't leaked.
+
+**Status policy** — agents never set their own status:
+
+| Action | Result |
+| ------ | ------ |
+| Create listing | Always `PENDING` (status isn't in the form schema; forced server-side) |
+| Edit an APPROVED / PENDING listing | Status unchanged (public re-moderation comes with Phase 10) |
+| Edit a REJECTED listing | Resubmitted: back to `PENDING`, rejection reason cleared |
+| "Mark as rented/sold" | Only from `APPROVED` → `RENTED_OR_SOLD` |
+| "Relist" | `RENTED_OR_SOLD` → `PENDING` (must pass moderation again) |
+| Delete | Removes the property; images/favorites/inquiries cascade in the DB |
+
+Notable validation rules: price in whole GHS (₵1–₵100,000,000); SALE
+listings must use the one-off price period and RENT listings per month/year;
+coordinates, when given, must come as a pair inside Ghana's bounding box
+(map pin picker arrives in Phase 7); LAND can't have bedrooms/bathrooms;
+amenities are limited to the canonical list in `lib/constants.ts`.
+
 ## Useful scripts
 
 | Command             | What it does                                        |
