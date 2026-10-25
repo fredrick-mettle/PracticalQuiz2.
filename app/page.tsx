@@ -1,177 +1,168 @@
-import { prisma } from "@/lib/prisma";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { getCurrentUser } from "@/lib/auth-helpers";
+import {
+  getFeaturedProperties,
+  getHomeStats,
+  getRegionCounts,
+} from "@/lib/services/public-properties";
 import { GHANA_REGIONS } from "@/lib/constants";
-import { formatGHS, pricePeriodSuffix } from "@/lib/utils";
+import { EMPTY_SEARCH_QUERY, propertiesHref } from "@/lib/validations/search";
+import { PropertyCard } from "@/components/properties/property-card";
+import { SearchBar } from "@/components/search/search-bar";
 
-// TEMPORARY Phase 1 status page: proves the full stack works end-to-end
-// (Next.js → Prisma → PostgreSQL) by reading live counts from the database.
-// It is replaced by the real home page in Phase 5.
-export const dynamic = "force-dynamic";
-
-async function getStats() {
-  const [usersByRole, propertiesByStatus, propertiesByRegion, latest] =
-    await Promise.all([
-      prisma.user.groupBy({ by: ["role"], _count: true }),
-      prisma.property.groupBy({ by: ["status"], _count: true }),
-      prisma.property.groupBy({
-        by: ["region"],
-        _count: true,
-        orderBy: { _count: { region: "desc" } },
-      }),
-      prisma.property.findMany({
-        where: { status: "APPROVED" },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          title: true,
-          price: true,
-          pricePeriod: true,
-          region: true,
-          city: true,
-          area: true,
-        },
-      }),
-    ]);
-  return { usersByRole, propertiesByStatus, propertiesByRegion, latest };
-}
+export const metadata: Metadata = {
+  description:
+    "Find verified houses, apartments and land for rent or sale across all 16 regions of Ghana.",
+};
 
 export default async function HomePage() {
-  let stats: Awaited<ReturnType<typeof getStats>> | null = null;
-  try {
-    stats = await getStats();
-  } catch {
-    stats = null;
-  }
+  const [featured, stats, regionCounts, user] = await Promise.all([
+    getFeaturedProperties(8),
+    getHomeStats(),
+    getRegionCounts(),
+    getCurrentUser(),
+  ]);
+
+  const capitalOf = (regionName: string) =>
+    GHANA_REGIONS.find((r) => r.name === regionName)?.capital;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <header className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-          RentGH — Ghana Rental &amp; Property Finder
-        </p>
-        <h1 className="mt-2 text-3xl font-bold sm:text-4xl">
-          Phase 1 of 12: Setup complete ✅
-        </h1>
-        <p className="mt-3 max-w-2xl text-slate-600">
-          Next.js 14 + TypeScript + Tailwind CSS, Prisma ORM with a real
-          PostgreSQL database, first migration applied and seeded with sample
-          data. The numbers below are read live from the database.
-        </p>
-      </header>
+    <main>
+      {/* ── Hero + search ─────────────────────────────────────────────── */}
+      <section className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-800">
+        <div className="mx-auto max-w-7xl px-4 pb-14 pt-12 sm:px-6 sm:pt-16">
+          <div className="max-w-2xl">
+            {/* Ghana flag accent */}
+            <div className="mb-5 flex h-1.5 w-24 overflow-hidden rounded-full" aria-hidden="true">
+              <span className="flex-1 bg-[#CE1126]" />
+              <span className="flex-1 bg-[#FCD116]" />
+              <span className="flex-1 bg-[#006B3F]" />
+            </div>
+            <h1 className="text-3xl font-bold leading-tight text-white sm:text-5xl">
+              Find your next home in Ghana
+            </h1>
+            <p className="mt-3 text-base leading-7 text-emerald-100 sm:text-lg">
+              Verified houses, apartments, rooms and land for rent or sale —
+              from Accra to Tamale, Ho to Takoradi.
+            </p>
+          </div>
 
-      {!stats ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-900">
-          <h2 className="font-semibold">Database not reachable</h2>
-          <p className="mt-2 text-sm">
-            Start the local PostgreSQL with{" "}
-            <code className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-xs">
-              npm run db:local
-            </code>{" "}
-            (separate terminal), make sure{" "}
-            <code className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-xs">
-              .env
-            </code>{" "}
-            contains a valid{" "}
-            <code className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-xs">
-              DATABASE_URL
-            </code>
-            , then run{" "}
-            <code className="rounded bg-red-100 px-1.5 py-0.5 font-mono text-xs">
-              npm run db:seed
-            </code>{" "}
-            and refresh this page.
+          <div className="mt-8 max-w-4xl">
+            <SearchBar initialQuery={EMPTY_SEARCH_QUERY} />
+          </div>
+
+          <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-emerald-100">
+            <span>{stats.total} verified listings</span>
+            <span aria-hidden="true">·</span>
+            <span>{stats.forRent} for rent</span>
+            <span aria-hidden="true">·</span>
+            <span>{stats.forSale} for sale</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {regionCounts.length} of 16 regions covered
+            </span>
           </p>
         </div>
-      ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Database
+      </section>
+
+      {/* ── Featured listings ─────────────────────────────────────────── */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Featured properties
             </h2>
-            <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-emerald-700">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              Connected
-            </p>
             <p className="mt-1 text-sm text-slate-600">
-              {GHANA_REGIONS.length} Ghana regions loaded from{" "}
-              <code className="font-mono text-xs">lib/constants.ts</code>
+              Hand-approved listings with the best photos, updated daily.
             </p>
-          </section>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Users by role
-            </h2>
-            <ul className="mt-3 space-y-1.5 text-sm">
-              {stats.usersByRole.map((r) => (
-                <li key={r.role} className="flex justify-between">
-                  <span className="text-slate-700">{r.role}</span>
-                  <span className="font-semibold">{r._count}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Properties by status
-            </h2>
-            <ul className="mt-3 space-y-1.5 text-sm">
-              {stats.propertiesByStatus.map((s) => (
-                <li key={s.status} className="flex justify-between">
-                  <span className="text-slate-700">{s.status}</span>
-                  <span className="font-semibold">{s._count}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Properties by region
-            </h2>
-            <ul className="mt-3 space-y-1.5 text-sm">
-              {stats.propertiesByRegion.map((r) => (
-                <li key={r.region} className="flex justify-between">
-                  <span className="text-slate-700">{r.region}</span>
-                  <span className="font-semibold">{r._count}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:col-span-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Latest approved listings
-            </h2>
-            <ul className="mt-3 divide-y divide-slate-100 text-sm">
-              {stats.latest.map((p) => (
-                <li key={p.id} className="flex items-center justify-between py-2">
-                  <span>
-                    <span className="font-medium text-slate-900">{p.title}</span>
-                    <span className="block text-xs text-slate-500">
-                      {p.area ? `${p.area}, ` : ""}
-                      {p.city} — {p.region}
-                    </span>
-                  </span>
-                  <span className="font-semibold text-emerald-800">
-                    {formatGHS(p.price)}
-                    <span className="text-xs font-normal text-slate-500">
-                      {pricePeriodSuffix(p.pricePeriod)}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
+          </div>
+          <Link
+            href="/properties"
+            className="flex-none text-sm font-semibold text-emerald-700 hover:underline"
+          >
+            View all →
+          </Link>
         </div>
+
+        {featured.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+            <p className="font-medium text-slate-800">No listings yet</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-slate-600">
+              New verified properties are on the way — please check back soon.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {featured.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Browse by region ──────────────────────────────────────────── */}
+      {regionCounts.length > 0 && (
+        <section className="border-y border-slate-200 bg-slate-50">
+          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Browse by region
+            </h2>
+            <p className="mb-6 mt-1 text-sm text-slate-600">
+              Where in Ghana are you looking to live?
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {regionCounts.slice(0, 8).map(({ region, count }) => (
+                <Link
+                  key={region}
+                  href={propertiesHref(EMPTY_SEARCH_QUERY, { region })}
+                  className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
+                >
+                  <p className="font-semibold text-slate-900 group-hover:text-emerald-800">
+                    {region}
+                  </p>
+                  <p className="mt-0.5 text-sm text-slate-500">
+                    Capital: {capitalOf(region)}
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-emerald-700">
+                    {count} {count === 1 ? "property" : "properties"} →
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
 
-      <footer className="mt-10 text-sm text-slate-500">
-        Next up — Phase 2: authentication &amp; roles (NextAuth). Say{" "}
-        <span className="font-semibold text-slate-700">&ldquo;next&rdquo;</span>{" "}
-        when you are ready.
-      </footer>
+      {/* ── Agent call to action ──────────────────────────────────────── */}
+      {(!user || user.role === "AGENT") && (
+        <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <div className="flex flex-col items-start justify-between gap-5 rounded-2xl bg-emerald-800 px-6 py-8 sm:flex-row sm:items-center sm:px-10">
+            <div>
+              <h2 className="text-xl font-bold text-white sm:text-2xl">
+                Have a property to rent or sell?
+              </h2>
+              <p className="mt-1 max-w-xl text-sm leading-6 text-emerald-100">
+                Reach thousands of tenants and buyers across Ghana. List for
+                free — every property is reviewed by our team before it goes
+                live.
+              </p>
+            </div>
+            <Link
+              href={
+                user?.role === "AGENT"
+                  ? "/dashboard/properties/new"
+                  : "/register"
+              }
+              className="flex-none rounded-lg bg-white px-5 py-3 text-sm font-semibold text-emerald-900 shadow-sm hover:bg-emerald-50"
+            >
+              {user?.role === "AGENT"
+                ? "List a property"
+                : "Join as an agent / landlord"}
+            </Link>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

@@ -46,6 +46,12 @@ export async function Navbar() {
 
         {/* Desktop navigation */}
         <nav className="hidden items-center gap-1 md:flex">
+          <Link
+            href="/properties"
+            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          >
+            Browse Properties
+          </Link>
           {roleLink && (
             <Link
               href={roleLink.href}

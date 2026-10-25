@@ -157,6 +157,26 @@ source of truth).
    Photos section shows a "not configured" notice and existing photos can
    still be reordered or removed.
 
+## Public browsing & search (Phase 5)
+
+The home page (`/`) is the real storefront now: hero with the search bar,
+featured listings (most photos, then newest), browse-by-region cards and
+live counts. `/properties` is the results page — keyword (title/city/area),
+region, city, type, rent/sale, price range and minimum-bedrooms filters,
+three sort orders, removable filter chips, and pagination (12 per page).
+The same search bar component is reused on both pages and navigates with
+shareable URL parameters.
+
+**Only APPROVED listings are ever public** — every query in
+`lib/services/public-properties.ts` hard-codes `status: "APPROVED"`, so
+pending, rejected and rented/sold properties can't leak. URL parameters
+are treated as untrusted: `lib/validations/search.ts` validates and
+coerces them, silently dropping anything invalid (unknown regions,
+non-numeric prices; out-of-range pages redirect to the last page) instead
+of erroring the page.
+
+Cards link to `/properties/[id]` — the detail page arrives in Phase 6.
+
 ## Useful scripts
 
 | Command             | What it does                                        |
@@ -212,7 +232,7 @@ generation gets the same fallback automatically via
 - [x] **Phase 2 — Authentication & roles:** NextAuth credentials, register/login/logout, role-based middleware + navbar
 - [x] **Phase 3 — Listing CRUD:** agent dashboard with own-listing CRUD, server-side ownership enforcement, PENDING default + status policy
 - [x] **Phase 4 — Image uploads (Cloudinary):** signed direct uploads with server-verified results, cover/reorder/delete, deletion sync, graceful unconfigured mode
-- [ ] Phase 5 — Public browsing & search filters
+- [x] **Phase 5 — Public browsing & search:** home storefront + `/properties` with validated filters/sort/pagination, APPROVED-only visibility
 - [ ] Phase 6 — Property detail page
 - [ ] Phase 7 — Maps (Leaflet)
 - [ ] Phase 8 — In-app inquiries
