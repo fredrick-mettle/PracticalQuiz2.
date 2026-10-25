@@ -6,6 +6,7 @@ import {
   countAgentPropertiesByStatus,
   listAgentProperties,
 } from "@/lib/services/properties";
+import { countAgentInquiriesByStatus } from "@/lib/services/inquiries";
 import {
   LISTING_TYPE_LABELS,
   PROPERTY_STATUSES,
@@ -51,10 +52,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const q = searchParams.q?.trim() ? searchParams.q.trim() : undefined;
   const page = Math.max(1, Number.parseInt(searchParams.page ?? "1", 10) || 1);
 
-  const [counts, { properties, total, totalPages }] = await Promise.all([
-    countAgentPropertiesByStatus(user.id),
-    listAgentProperties(user.id, { status, q, page, pageSize: PAGE_SIZE }),
-  ]);
+  const [counts, { properties, total, totalPages }, inquiryCounts] =
+    await Promise.all([
+      countAgentPropertiesByStatus(user.id),
+      listAgentProperties(user.id, { status, q, page, pageSize: PAGE_SIZE }),
+      countAgentInquiriesByStatus(user.id),
+    ]);
   const totalListings = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const tabs: { label: string; status?: PropertyStatus; count: number }[] = [
@@ -78,12 +81,25 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             total
           </p>
         </div>
-        <Link
-          href="/dashboard/properties/new"
-          className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
-        >
-          + New listing
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/inquiries"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Inquiries
+            {inquiryCounts.NEW > 0 && (
+              <span className="ml-2 inline-flex rounded-full bg-amber-500 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                {inquiryCounts.NEW} new
+              </span>
+            )}
+          </Link>
+          <Link
+            href="/dashboard/properties/new"
+            className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            + New listing
+          </Link>
+        </div>
       </div>
 
       {/* Status filter tabs */}

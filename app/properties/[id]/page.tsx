@@ -16,6 +16,9 @@ import { PropertyCard } from "@/components/properties/property-card";
 import { PropertyGallery } from "@/components/properties/gallery";
 import { AgentContactCard } from "@/components/properties/agent-contact-card";
 import { PropertyMap } from "@/components/maps/property-map";
+import { getCurrentUser } from "@/lib/auth-helpers";
+import { getOpenInquiryFor } from "@/lib/services/inquiries";
+import { InquiryForm } from "@/components/inquiries/inquiry-form";
 
 interface PageProps {
   params: { id: string };
@@ -55,6 +58,13 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   if (!property) notFound();
 
   const similar = await getSimilarProperties(property);
+
+  const currentUser = await getCurrentUser();
+  const isOwner = currentUser?.id === property.ownerId;
+  const openInquiry =
+    currentUser && !isOwner
+      ? await getOpenInquiryFor(currentUser.id, property.id)
+      : null;
 
   const listedOn = property.createdAt.toLocaleDateString("en-GB", {
     day: "numeric",
@@ -239,6 +249,63 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               phone={property.owner.phone}
               memberSince={memberSince}
             />
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-base font-bold text-slate-900">
+              Interested in this property?
+            </h2>
+            {!currentUser ? (
+              <>
+                <p className="text-sm leading-6 text-slate-600">
+                  Log in to send {property.owner.name} an inquiry and arrange
+                  a viewing.
+                </p>
+                <Link
+                  href={`/login?callbackUrl=${encodeURIComponent(`/properties/${property.id}`)}`}
+                  className="mt-3 block rounded-lg bg-emerald-700 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-emerald-800"
+                >
+                  Log in to send an inquiry
+                </Link>
+                <p className="mt-2.5 text-center text-xs text-slate-500">
+                  New to RentGH?{" "}
+                  <Link href="/register" className="font-semibold text-emerald-700 hover:underline">
+                    Create a free account
+                  </Link>
+                </p>
+              </>
+            ) : isOwner ? (
+              <>
+                <p className="text-sm leading-6 text-slate-600">
+                  This is your listing. Tenant messages about it land in your
+                  inquiries inbox.
+                </p>
+                <Link
+                  href="/dashboard/inquiries"
+                  className="mt-3 block rounded-lg border border-emerald-600 px-4 py-2.5 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                >
+                  View my inquiries
+                </Link>
+              </>
+            ) : openInquiry ? (
+              <>
+                <p className="text-sm leading-6 text-slate-600">
+                  You already have an open conversation with{" "}
+                  {property.owner.name} about this property.
+                </p>
+                <Link
+                  href={`/inquiries/${openInquiry.id}`}
+                  className="mt-3 block rounded-lg bg-emerald-700 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-emerald-800"
+                >
+                  Continue conversation
+                </Link>
+              </>
+            ) : (
+              <InquiryForm
+                propertyId={property.id}
+                agentName={property.owner.name}
+              />
+            )}
           </div>
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">

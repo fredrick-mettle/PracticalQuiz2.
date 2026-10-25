@@ -110,6 +110,16 @@ export const PROPERTY_STATUS_LABELS: Record<string, string> = {
   RENTED_OR_SOLD: "Rented / Sold",
 };
 
+/** Inquiry conversation statuses (Phase 8), mirroring the Prisma enum. */
+export const INQUIRY_STATUSES = ["NEW", "READ", "REPLIED", "CLOSED"] as const;
+
+export const INQUIRY_STATUS_LABELS: Record<string, string> = {
+  NEW: "New",
+  READ: "Read",
+  REPLIED: "Replied",
+  CLOSED: "Closed",
+};
+
 /**
  * Property photo limits (Phase 4) — checked in the browser for fast
  * feedback and enforced again on the server. Client-safe (no secrets).

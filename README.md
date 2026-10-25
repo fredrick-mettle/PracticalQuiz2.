@@ -214,6 +214,37 @@ Markers are pure-CSS pins (`divIcon`s) to dodge Leaflet's fragile
 default marker images, and all popup text is HTML-escaped. Map tiles
 load browser-side, so maps work even in offline dev sandboxes.
 
+## Inquiries & email (Phase 8)
+
+Signed-in users send inquiries from the property page (guests are asked
+to log in; the owner sees a link to their inbox instead). Both sides
+get threaded inboxes: tenants at `/inquiries`, agents at
+`/dashboard/inquiries` with New/Read/Replied/Closed tabs, an unread
+badge on the dashboard, and close/reopen. There is one open thread per
+tenant+property — sending again continues the conversation rather than
+spamming new ones. Status tracks the agent's attention (a tenant reply
+flips it back to New), and only the two participants can ever see a
+thread — everyone else gets a 404.
+
+Email notifications (new inquiry + every reply) go through
+[Resend](https://resend.com). Add both keys to `.env` and restart to
+enable — without them, sends are logged no-ops and everything else
+works:
+
+```bash
+RESEND_API_KEY="re_..."
+EMAIL_FROM="RentGH <noreply@yourdomain.com>"
+```
+
+Resend's free tier only delivers to your own account email until you
+verify a domain — fine for development.
+
+**Migration note:** `CLOSED` was added to `InquiryStatus` in
+`20261025230000_add_closed_inquiry_status`. In this offline sandbox the
+migration file was authored by hand and applied with `migrate deploy`
+(the WASM shim can't run shadow-database diagnostics); on a normal
+machine `npm run db:migrate` generates the identical SQL.
+
 ## Useful scripts
 
 | Command             | What it does                                        |
@@ -272,7 +303,7 @@ generation gets the same fallback automatically via
 - [x] **Phase 5 — Public browsing & search:** home storefront + `/properties` with validated filters/sort/pagination, APPROVED-only visibility
 - [x] **Phase 6 — Property detail page:** gallery, key details, agent contact reveal + WhatsApp, similar properties, APPROVED-only 404s
 - [x] **Phase 7 — Maps (Leaflet/OpenStreetMap):** detail-page pin, search map view with price-pill pins + popups, form pin-picker synced with lat/lng fields
-- [ ] Phase 8 — In-app inquiries
+- [x] **Phase 8 — Inquiries & email:** threaded tenant/agent inboxes, NEW→READ→REPLIED→CLOSED flow, Resend notifications (graceful unconfigured mode)
 - [ ] Phase 9 — Favorites
 - [ ] Phase 10 — Admin panel
 - [ ] Phase 11 — Security & quality
