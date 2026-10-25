@@ -109,3 +109,11 @@ export const PROPERTY_STATUS_LABELS: Record<string, string> = {
   REJECTED: "Rejected",
   RENTED_OR_SOLD: "Rented / Sold",
 };
+
+/**
+ * Property photo limits (Phase 4) — checked in the browser for fast
+ * feedback and enforced again on the server. Client-safe (no secrets).
+ */
+export const MAX_IMAGES_PER_PROPERTY = 10;
+export const MAX_IMAGE_SIZE_MB = 5;
+export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];

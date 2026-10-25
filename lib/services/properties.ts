@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { propertyFormSchema } from "@/lib/validations/property";
+import { deleteCloudinaryImage } from "@/lib/cloudinary";
 import type { PropertyStatus } from "@/lib/generated/prisma/enums";
 import type { Property } from "@/lib/generated/prisma/client";
 
@@ -94,7 +95,8 @@ export async function updateProperty(
 
 /**
  * Delete a listing the agent owns. Images/favorites/inquiries cascade in
- * the database. (Phase 4: also delete the files from Cloudinary.)
+ * the database; the image files are then removed from Cloudinary
+ * (best-effort — the DB delete stands even if Cloudinary is unreachable).
  */
 export async function deleteProperty(
   ownerId: string,
@@ -103,7 +105,15 @@ export async function deleteProperty(
   const existing = await getOwnedProperty(ownerId, propertyId);
   if (!existing) return NOT_FOUND;
 
+  const images = await prisma.propertyImage.findMany({
+    where: { propertyId: existing.id },
+    select: { publicId: true },
+  });
+
   await prisma.property.delete({ where: { id: existing.id } });
+
+  // Seeded placeholder rows have no publicId — those are skipped inside.
+  await Promise.all(images.map((img) => deleteCloudinaryImage(img.publicId)));
   return { success: true };
 }
 
@@ -177,6 +187,7 @@ export async function listAgentProperties(
       take: query.pageSize,
       include: {
         images: { orderBy: { order: "asc" }, take: 1 },
+        _count: { select: { images: true } },
       },
     }),
   ]);

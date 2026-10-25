@@ -20,7 +20,8 @@ export default async function NewPropertyPage() {
         Create a new listing
       </h1>
       <p className="mb-8 mt-2 text-slate-600">
-        Fill in the property details below. Photos can be added in Phase 4.
+        Fill in the property details below — you&apos;ll add photos right
+        after creating it.
       </p>
       <PropertyForm />
     </div>

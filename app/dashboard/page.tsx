@@ -205,6 +205,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                         </svg>
                       </div>
                     )}
+                    {property._count.images > 0 && (
+                      <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
+                        {property._count.images} photo
+                        {property._count.images === 1 ? "" : "s"}
+                      </span>
+                    )}
                   </div>
 
                   <div className="min-w-0 flex-1 p-4">

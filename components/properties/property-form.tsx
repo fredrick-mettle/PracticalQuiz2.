@@ -138,7 +138,12 @@ export function PropertyForm({ propertyId, initialValues }: Props) {
       setServerError(result.message);
       return;
     }
-    router.push("/dashboard");
+    if (propertyId) {
+      router.push("/dashboard");
+    } else {
+      // New listing: land on its edit page to add photos right away.
+      router.push(`/dashboard/properties/${result.propertyId}/edit?created=1`);
+    }
     router.refresh();
   }
 

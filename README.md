@@ -87,7 +87,9 @@ npm run dev           # http://localhost:3000
 | `/register`  | Public            | TENANT or AGENT self-registration       |
 | `/login`     | Public            | Redirects signed-in users to their home |
 | `/profile`   | Any signed-in user|                                         |
-| `/dashboard` | AGENT only        | Agent home (listing CRUD in Phase 3)    |
+| `/dashboard` | AGENT only        | Agent home: own listings, status tabs   |
+| `/dashboard/properties/new` | AGENT only | Create listing (→ PENDING review)       |
+| `/dashboard/properties/[id]/edit` | AGENT (owner) only | Edit own listing + photos; 404 if not yours |
 | `/admin`     | ADMIN only        | Admin home (full panel in Phase 10)     |
 
 Protection is layered: `middleware.ts` checks the role embedded in the JWT
@@ -126,6 +128,34 @@ listings must use the one-off price period and RENT listings per month/year;
 coordinates, when given, must come as a pair inside Ghana's bounding box
 (map pin picker arrives in Phase 7); LAND can't have bedrooms/bathrooms;
 amenities are limited to the canonical list in `lib/constants.ts`.
+
+## Image uploads (Phase 4)
+
+Listings can have up to **10 photos** (JPG/PNG/WebP, max 5MB each), managed
+from the Photos section of the edit page — the first photo is the cover.
+Uploads are **signed and direct**: the server issues a short-lived
+Cloudinary signature (`lib/cloudinary.ts`), the browser uploads straight to
+Cloudinary (nothing passes through our server), and the result is only
+saved after the server verifies Cloudinary's own response signature, cloud
+name and folder (`rentgh/properties`). Deleting a photo or listing also
+deletes the file from Cloudinary (best-effort — the database stays the
+source of truth).
+
+**Enable uploads** (takes ~2 minutes, free tier is plenty):
+
+1. Create an account at [cloudinary.com](https://cloudinary.com) and open
+   **Console → Settings → API Keys**.
+2. Put the three values in `.env` (they stay server-side — never commit them):
+
+   ```bash
+   CLOUDINARY_CLOUD_NAME="your-cloud-name"
+   CLOUDINARY_API_KEY="123456789012345"
+   CLOUDINARY_API_SECRET="your-secret"
+   ```
+
+3. Restart the dev server. Without these keys the app still runs — the
+   Photos section shows a "not configured" notice and existing photos can
+   still be reordered or removed.
 
 ## Useful scripts
 
@@ -180,8 +210,8 @@ generation gets the same fallback automatically via
 
 - [x] **Phase 1 — Setup:** scaffold, Tailwind, Prisma schema, first migration, seed
 - [x] **Phase 2 — Authentication & roles:** NextAuth credentials, register/login/logout, role-based middleware + navbar
-- [ ] Phase 3 — Listing CRUD (agent dashboard)
-- [ ] Phase 4 — Image uploads (Cloudinary)
+- [x] **Phase 3 — Listing CRUD:** agent dashboard with own-listing CRUD, server-side ownership enforcement, PENDING default + status policy
+- [x] **Phase 4 — Image uploads (Cloudinary):** signed direct uploads with server-verified results, cover/reorder/delete, deletion sync, graceful unconfigured mode
 - [ ] Phase 5 — Public browsing & search filters
 - [ ] Phase 6 — Property detail page
 - [ ] Phase 7 — Maps (Leaflet)
