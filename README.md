@@ -9,10 +9,12 @@ Built phase by phase (12 phases total).
 
 - **Next.js 14** (App Router) + **TypeScript** + **Tailwind CSS**
 - **PostgreSQL** + **Prisma 7** ORM (Rust-free WASM query engine + `pg` driver adapter)
-- **NextAuth** (credentials) — Phase 2
+- **NextAuth v4** (credentials provider, JWT sessions, bcrypt-hashed passwords)
 - **Cloudinary** signed uploads — Phase 4
 - **Leaflet + OpenStreetMap** — Phase 7
-- **Zod** + **React Hook Form** — from Phase 2/3
+- **Zod** validation + **React Hook Form** (auth forms; everywhere from Phase 3)
+- **Server Actions** are the standard mutation mechanism (route handlers only
+  where the framework requires them, e.g. NextAuth's endpoint)
 - Currency: **GHS** (whole cedis). Locations: Ghana regions → city/town → area.
 
 ## Quick start
@@ -29,6 +31,12 @@ This also generates the Prisma client (`postinstall`).
 
 ```bash
 cp .env.example .env
+```
+
+Set `DATABASE_URL` (below) and a `NEXTAUTH_SECRET`:
+
+```bash
+openssl rand -base64 32   # paste the output into .env as NEXTAUTH_SECRET
 ```
 
 ### 3. Start a database (pick ONE)
@@ -68,6 +76,26 @@ npm run dev           # http://localhost:3000
 | Agent  | ama.serwaa@rentgh.com    | Password123!  |
 | Tenant | yaw.danso@gmail.com      | Password123!  |
 
+## Authentication & roles
+
+- `TENANT` — browse, save favorites (Phase 9), send inquiries (Phase 8)
+- `AGENT` — agent/landlord: manage own listings (Phase 3) and inquiries
+- `ADMIN` — moderation and user management (Phase 10)
+
+| Route        | Access            | Notes                                   |
+| ------------ | ----------------- | --------------------------------------- |
+| `/register`  | Public            | TENANT or AGENT self-registration       |
+| `/login`     | Public            | Redirects signed-in users to their home |
+| `/profile`   | Any signed-in user|                                         |
+| `/dashboard` | AGENT only        | Agent home (listing CRUD in Phase 3)    |
+| `/admin`     | ADMIN only        | Admin home (full panel in Phase 10)     |
+
+Protection is layered: `middleware.ts` checks the role embedded in the JWT
+(Edge-safe, no DB access), and pages/server actions re-check on the server
+via `requireRole()` in `lib/auth-helpers.ts`. After login, admins land on
+`/admin`, agents on `/dashboard`, tenants on `/` (or the page they were
+trying to visit). Suspended/banned accounts cannot sign in.
+
 ## Useful scripts
 
 | Command             | What it does                                        |
@@ -86,13 +114,16 @@ npm run dev           # http://localhost:3000
 ## project structure
 
 ```
-app/            Next.js App Router pages/layouts
-components/     Shared React components
-lib/            prisma.ts (DB client), constants.ts (regions/amenities), utils.ts
+app/            Next.js App Router pages/layouts (+ api/auth route)
+components/     Shared React components (layout/, auth/)
+lib/            prisma.ts (DB client), auth.ts (NextAuth), auth-helpers.ts,
+                constants.ts (regions/amenities), utils.ts,
+                validations/ (Zod schemas), services/ + actions/ (mutations)
+middleware.ts   Role-based route protection
 prisma/         schema.prisma, migrations/, seed.ts
 prisma.config.ts  Prisma CLI config (datasource URL, seed command)
 scripts/        local-db.mjs (embedded Postgres), schema-engine-shim.mjs (see below)
-types/          Shared TypeScript types
+types/          Shared TypeScript types (incl. NextAuth augmentation)
 ```
 
 ## A note on Prisma engines & offline environments
@@ -117,7 +148,7 @@ generation gets the same fallback automatically via
 ## Progress
 
 - [x] **Phase 1 — Setup:** scaffold, Tailwind, Prisma schema, first migration, seed
-- [ ] Phase 2 — Authentication & roles
+- [x] **Phase 2 — Authentication & roles:** NextAuth credentials, register/login/logout, role-based middleware + navbar
 - [ ] Phase 3 — Listing CRUD (agent dashboard)
 - [ ] Phase 4 — Image uploads (Cloudinary)
 - [ ] Phase 5 — Public browsing & search filters

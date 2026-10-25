@@ -20,3 +20,27 @@ export function pricePeriodSuffix(period: string): string {
       return "";
   }
 }
+
+/** Where each role lands after login. */
+export function roleHomePath(role: string): string {
+  switch (role) {
+    case "ADMIN":
+      return "/admin";
+    case "AGENT":
+      return "/dashboard";
+    default:
+      return "/";
+  }
+}
+
+/** Human-readable role name. */
+export function roleLabel(role: string): string {
+  switch (role) {
+    case "ADMIN":
+      return "Admin";
+    case "AGENT":
+      return "Agent / Landlord";
+    default:
+      return "Tenant";
+  }
+}

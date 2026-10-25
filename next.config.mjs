@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Dev-only: allow the cloud preview proxy origin to reach the dev server.
+  allowedDevOrigins: ["*.e2b.app"],
   images: {
     remotePatterns: [
       // Seed placeholder photos

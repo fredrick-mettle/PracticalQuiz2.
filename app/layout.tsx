@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Navbar } from "@/components/layout/navbar";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -32,7 +33,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-white text-slate-900 antialiased`}
       >
-        {children}
+        <Navbar />
+        <div className="min-h-[calc(100vh-9rem)]">{children}</div>
+        <footer className="border-t border-slate-200 bg-slate-50">
+          <div className="mx-auto flex max-w-7xl flex-col items-center gap-1 px-4 py-6 text-center text-sm text-slate-500 sm:px-6">
+            <p className="font-semibold text-slate-700">
+              Rent<span className="text-emerald-700">GH</span>
+            </p>
+            <p>
+              Find your next home in Ghana — houses, apartments, rooms,
+              hostels and land across all 16 regions.
+            </p>
+          </div>
+        </footer>
       </body>
     </html>
   );
