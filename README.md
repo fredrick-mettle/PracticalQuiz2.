@@ -117,7 +117,8 @@ property id alone, and opening another agent's edit page returns **404**
 | Action | Result |
 | ------ | ------ |
 | Create listing | Always `PENDING` (status isn't in the form schema; forced server-side) |
-| Edit an APPROVED / PENDING listing | Status unchanged (public re-moderation comes with Phase 10) |
+| Edit a PENDING listing | Status unchanged |
+| Edit an APPROVED listing | Back to `PENDING` for re-moderation (since Phase 10 — photo changes don't trigger this) |
 | Edit a REJECTED listing | Resubmitted: back to `PENDING`, rejection reason cleared |
 | "Mark as rented/sold" | Only from `APPROVED` → `RENTED_OR_SOLD` |
 | "Relist" | `RENTED_OR_SOLD` → `PENDING` (must pass moderation again) |
@@ -305,6 +306,41 @@ driver adapter — identical migrations, no binary download. (Client
 generation gets the same fallback automatically via
 `scripts/prisma-generate.mjs`.)
 
+## Admin panel (Phase 10)
+
+`/admin` is ADMIN-only (middleware + server-side `requireRole` in the admin
+layout). Everything runs through Server Actions over `lib/services/admin.ts`.
+
+- **Overview** — live stats: listings by status, users by role, total
+  inquiries, plus the oldest listings still awaiting review.
+- **Moderation queue** — PENDING listings oldest-first (FIFO), with
+  waiting-time labels and a flag for listings with no photos. Approve or
+  reject inline; rejecting requires a written reason (5–500 chars) that the
+  agent sees on their edit page.
+- **Listings** — every property regardless of status, with status tabs and
+  search by title/city/owner. Inspect opens the full record (gallery,
+  address, coordinates, owner). From there an admin can take down a live
+  listing, reinstate a rejected one, or **delete** it outright (Cloudinary
+  files are cleaned up; favorites/inquiries cascade in the DB).
+- **Users** — searchable list with role/status filters. Suspend or ban
+  blocks the account's next sign-in (enforced in `lib/auth.ts`); reinstate
+  restores it. An admin can't change their own status or another admin's.
+
+**Moderation transitions** go through one guarded service: approve from
+PENDING/REJECTED, reject from PENDING/APPROVED; `RENTED_OR_SOLD` listings
+can't be moderated. The owner is emailed on approval (with the live link)
+and on rejection (with the reason and a link to fix it).
+
+**Policy completed from Phase 3:** editing a live (APPROVED) listing now
+sends it back to `PENDING` for re-moderation, so agents can't swap content
+after approval. The edit page warns about this. Photo-only changes don't
+trigger re-review.
+
+Known limitations: sessions are JWTs, so a suspension blocks the *next*
+sign-in — an already-logged-in user keeps their session until it expires;
+suspending an agent doesn't unpublish their listings (moderate or delete
+them separately).
+
 ## Progress
 
 - [x] **Phase 1 — Setup:** scaffold, Tailwind, Prisma schema, first migration, seed
@@ -316,7 +352,7 @@ generation gets the same fallback automatically via
 - [x] **Phase 7 — Maps (Leaflet/OpenStreetMap):** detail-page pin, search map view with price-pill pins + popups, form pin-picker synced with lat/lng fields
 - [x] **Phase 8 — Inquiries & email:** threaded tenant/agent inboxes, NEW→READ→REPLIED→CLOSED flow, Resend notifications (graceful unconfigured mode)
 - [x] **Phase 9 — Favorites:** optimistic heart toggles everywhere, saved-properties page with no-longer-available handling
-- [ ] Phase 10 — Admin panel
+- [x] **Phase 10 — Admin panel:** stats overview, FIFO moderation queue with rejection reasons + owner emails, full listing oversight & delete, user suspend/ban, re-moderation when a live listing is edited
 - [ ] Phase 11 — Security & quality
 - [ ] Phase 12 — Deployment
 

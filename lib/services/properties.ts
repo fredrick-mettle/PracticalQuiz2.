@@ -60,7 +60,9 @@ export async function createProperty(
 /**
  * Update a listing the agent owns.
  * Editing a REJECTED listing resubmits it for moderation (back to PENDING,
- * rejection reason cleared); all other statuses are preserved.
+ * rejection reason cleared). Editing an APPROVED (live) listing also
+ * returns it to PENDING for re-moderation (Phase 10). PENDING and
+ * RENTED_OR_SOLD statuses are preserved.
  */
 export async function updateProperty(
   ownerId: string,
@@ -78,7 +80,12 @@ export async function updateProperty(
   const existing = await getOwnedProperty(ownerId, propertyId);
   if (!existing) return NOT_FOUND;
 
-  const resubmit = existing.status === "REJECTED";
+  // REJECTED edits resubmit for review; edits to a LIVE (APPROVED)
+  // listing also return to moderation (Phase 10) so approved content
+  // can't be swapped unseen. PENDING stays PENDING; RENTED_OR_SOLD
+  // keeps its status (relisting re-enters moderation separately).
+  const resubmit =
+    existing.status === "REJECTED" || existing.status === "APPROVED";
 
   const property = await prisma.property.update({
     where: { id: existing.id },

@@ -1,56 +1,169 @@
 import type { Metadata } from "next";
-import { requireRole } from "@/lib/auth-helpers";
-import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import {
+  getAdminStats,
+  listModerationQueue,
+} from "@/lib/services/admin";
+import {
+  PROPERTY_STATUSES,
+  PROPERTY_STATUS_LABELS,
+} from "@/lib/constants";
+import { roleLabel } from "@/lib/utils";
+import { StatusBadge } from "@/components/properties/status-badge";
 
-export const metadata: Metadata = { title: "Admin Panel" };
+export const metadata: Metadata = { title: "Admin Overview" };
 
-// Phase 2 placeholder: confirms ADMIN-only access and shows platform
-// totals. The moderation queue and user management arrive in Phase 10.
-export default async function AdminPage() {
-  await requireRole("ADMIN");
+function formatWhen(date: Date): string {
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
-  const [usersByRole, propertiesByStatus] = await Promise.all([
-    prisma.user.groupBy({ by: ["role"], _count: true }),
-    prisma.property.groupBy({ by: ["status"], _count: true }),
+export default async function AdminOverviewPage() {
+  const [stats, queue] = await Promise.all([
+    getAdminStats(),
+    listModerationQueue(1, 5),
   ]);
 
-  const totalUsers = usersByRole.reduce((sum, r) => sum + r._count, 0);
-  const totalProperties = propertiesByStatus.reduce(
-    (sum, r) => sum + r._count,
-    0
-  );
-  const pendingCount =
-    propertiesByStatus.find((r) => r.status === "PENDING")?._count ?? 0;
-
   const cards = [
-    { label: "Total users", value: totalUsers },
-    { label: "Total listings", value: totalProperties },
-    { label: "Awaiting moderation", value: pendingCount },
+    {
+      label: "Awaiting moderation",
+      value: stats.statusCounts.PENDING,
+      href: "/admin/moderation",
+      highlight: stats.statusCounts.PENDING > 0,
+    },
+    {
+      label: "Live listings",
+      value: stats.statusCounts.APPROVED,
+      href: "/admin/properties?status=APPROVED",
+    },
+    { label: "Total users", value: stats.usersTotal, href: "/admin/users" },
+    {
+      label: "Inquiries (new)",
+      value: `${stats.inquiriesTotal} (${stats.inquiriesNew} new)`,
+      href: "/admin/properties",
+    },
   ];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-        Admin Panel
-      </h1>
-      <p className="mt-2 text-slate-600">
-        The moderation queue, user management and platform statistics arrive
-        in <strong>Phase 10</strong>. Platform totals so far:
-      </p>
-
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((card) => (
-          <div
+          <Link
             key={card.label}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+            href={card.href}
+            className={`rounded-xl border p-5 shadow-sm transition hover:shadow-md ${
+              card.highlight
+                ? "border-amber-300 bg-amber-50"
+                : "border-slate-200 bg-white"
+            }`}
           >
-            <p className="text-3xl font-bold text-slate-900">{card.value}</p>
+            <p className="text-2xl font-bold text-slate-900 sm:text-3xl">
+              {card.value}
+            </p>
             <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
               {card.label}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="font-bold text-slate-900">
+            Listings by status{" "}
+            <span className="text-sm font-normal text-slate-500">
+              ({stats.propertiesTotal} total · {stats.favoritesTotal} saves)
+            </span>
+          </h2>
+          <ul className="mt-4 space-y-2.5">
+            {PROPERTY_STATUSES.map((status) => (
+              <li key={status}>
+                <Link
+                  href={`/admin/properties?status=${status}`}
+                  className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <StatusBadge status={status} />
+                    <span className="text-sm text-slate-600">
+                      {PROPERTY_STATUS_LABELS[status]}
+                    </span>
+                  </span>
+                  <span className="font-semibold text-slate-900">
+                    {stats.statusCounts[status]}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="font-bold text-slate-900">Users by role</h2>
+          <ul className="mt-4 space-y-2.5">
+            {(["TENANT", "AGENT", "ADMIN"] as const).map((role) => (
+              <li key={role}>
+                <Link
+                  href={`/admin/users?role=${role}`}
+                  className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                >
+                  <span className="text-sm text-slate-700">
+                    {roleLabel(role)}
+                  </span>
+                  <span className="font-semibold text-slate-900">
+                    {stats.roleCounts[role]}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-slate-900">
+            Oldest awaiting moderation
+          </h2>
+          <Link
+            href="/admin/moderation"
+            className="text-sm font-semibold text-emerald-700 hover:underline"
+          >
+            Open queue →
+          </Link>
+        </div>
+        {queue.properties.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-600">
+            🎉 The moderation queue is empty.
+          </p>
+        ) : (
+          <ul className="mt-3 divide-y divide-slate-100">
+            {queue.properties.map((property) => (
+              <li key={property.id}>
+                <Link
+                  href={`/admin/properties/${property.id}`}
+                  className="flex items-center justify-between gap-3 py-2.5 hover:bg-slate-50"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-slate-900">
+                      {property.title}
+                    </span>
+                    <span className="block text-xs text-slate-500">
+                      {property.owner.name} · {property.city},{" "}
+                      {property.region}
+                    </span>
+                  </span>
+                  <span className="flex-none text-xs text-slate-500">
+                    {formatWhen(property.createdAt)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

@@ -73,6 +73,17 @@ export default async function EditPropertyPage({
         </div>
       )}
 
+      {property.status === "APPROVED" && (
+        <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+          <p className="font-semibold">This listing is currently live.</p>
+          <p>
+            Saving changes sends it back for admin review — it will be
+            hidden from the public until it&apos;s approved again. (Photo
+            changes above don&apos;t trigger re-review.)
+          </p>
+        </div>
+      )}
+
       {property.status === "REJECTED" && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-800">
           <p className="font-semibold">This listing was rejected by an admin.</p>

@@ -120,6 +120,15 @@ export const INQUIRY_STATUS_LABELS: Record<string, string> = {
   CLOSED: "Closed",
 };
 
+/** Account statuses (admin-managed, Phase 10), mirroring the Prisma enum. */
+export const USER_STATUSES = ["ACTIVE", "SUSPENDED", "BANNED"] as const;
+
+export const USER_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Active",
+  SUSPENDED: "Suspended",
+  BANNED: "Banned",
+};
+
 /**
  * Property photo limits (Phase 4) — checked in the browser for fast
  * feedback and enforced again on the server. Client-safe (no secrets).
