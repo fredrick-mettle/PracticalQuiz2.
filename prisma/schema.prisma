@@ -1,0 +1,184 @@
+// RentGH — Ghana Rental & Property Finder
+// Prisma schema. Migration engine/adapter are configured in prisma.config.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // No `url` in Prisma 7 schemas: connections go through driver adapters
+  // (prisma.config.ts for migrations, lib/prisma.ts at runtime), both
+  // reading DATABASE_URL from the environment.
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  TENANT
+  AGENT // property agent or landlord
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  ROOM
+  HOSTEL
+  LAND
+  COMMERCIAL
+}
+
+enum ListingType {
+  RENT
+  SALE
+}
+
+enum PricePeriod {
+  MONTH
+  YEAR
+  ONE_OFF
+}
+
+enum PropertyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RENTED_OR_SOLD
+}
+
+enum InquiryStatus {
+  NEW
+  READ
+  REPLIED
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  phone        String
+  passwordHash String
+  role         Role       @default(TENANT)
+  status       UserStatus @default(ACTIVE) // used by the admin panel (Phase 10)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  properties    Property[]     @relation("PropertyOwner")
+  favorites     Favorite[]
+  inquiriesSent Inquiry[]      @relation("InquirySender")
+  repliesSent   InquiryReply[] @relation("ReplySender")
+}
+
+model Property {
+  id          String      @id @default(cuid())
+  ownerId     String
+  owner       User        @relation("PropertyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  type        PropertyType
+  listingType ListingType
+
+  /// Price in whole Ghana cedis (GHS). Ghana rental/sale prices are quoted
+  /// in whole cedis, so an Int avoids Decimal/Float rounding issues.
+  price       Int
+  pricePeriod PricePeriod @default(MONTH)
+
+  bedrooms  Int? // null for LAND / COMMERCIAL
+  bathrooms Int?
+
+  /// One of Ghana's 16 regions (validated against lib/constants GHANA_REGIONS).
+  region    String
+  city      String // city or town, e.g. "Kumasi"
+  area      String? // neighbourhood, e.g. "East Legon"
+  address   String
+
+  latitude  Float?
+  longitude Float?
+
+  amenities String[]
+
+  status          PropertyStatus @default(PENDING)
+  rejectionReason String? // set when an admin rejects the listing (Phase 10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images    PropertyImage[]
+  favorites Favorite[]
+  inquiries Inquiry[]
+
+  @@index([region])
+  @@index([city])
+  @@index([price])
+  @@index([type])
+  @@index([listingType])
+  @@index([status])
+  @@index([ownerId])
+  @@index([createdAt])
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  url        String
+  /// Cloudinary public id — null for seed/placeholder images not on Cloudinary.
+  publicId   String?
+  /// Display order; the image with order 0 is the cover image.
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId])
+}
+
+model Favorite {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([userId, propertyId])
+  @@index([propertyId])
+}
+
+model Inquiry {
+  id         String        @id @default(cuid())
+  propertyId String
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User          @relation("InquirySender", fields: [senderId], references: [id], onDelete: Cascade)
+  message    String
+  status     InquiryStatus @default(NEW)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  replies InquiryReply[]
+
+  @@index([propertyId])
+  @@index([senderId])
+  @@index([status])
+}
+
+model InquiryReply {
+  id        String   @id @default(cuid())
+  inquiryId String
+  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation("ReplySender", fields: [senderId], references: [id], onDelete: Cascade)
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([inquiryId])
+  @@index([senderId])
+}
