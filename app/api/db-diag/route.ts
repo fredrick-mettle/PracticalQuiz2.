@@ -2,22 +2,46 @@ import { NextResponse } from "next/server";
 
 /**
  * TEMPORARY diagnostic route (Phase 12 deploy debugging — DELETE after use).
- * Token-guarded; reports only non-secret connection metadata and error
- * shapes for: env parsing, raw pg connect, pg with relaxed TLS, the Prisma
- * WASM compiler import, and a real Prisma query.
+ * Token-guarded; runs the real service calls behind /properties and the
+ * detail page in isolation and reports the exact error shapes.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TOKEN = "rg-diag-9c41x";
+const DETAIL_ID = "cmvp4kpg40004l5nzc8p7pc5z";
 
 function describe(e: unknown): Record<string, string> {
-  const err = e as { name?: string; code?: string; message?: string };
+  const err = e as {
+    name?: string;
+    code?: string;
+    message?: string;
+    meta?: unknown;
+  };
+  let meta = "";
+  try {
+    meta = JSON.stringify(err?.meta ?? null)?.slice(0, 300) ?? "";
+  } catch {
+    meta = "unserializable";
+  }
   return {
     name: String(err?.name ?? "unknown"),
     code: String(err?.code ?? "none"),
-    message: String(err?.message ?? e).slice(0, 400),
+    message: String(err?.message ?? e).slice(0, 800),
+    meta,
   };
+}
+
+async function attempt<T>(
+  fn: () => Promise<T>,
+  summarize: (v: T) => unknown
+): Promise<Record<string, unknown>> {
+  try {
+    const v = await fn();
+    return { ok: true, result: summarize(v) };
+  } catch (e) {
+    return { ok: false, ...describe(e) };
+  }
 }
 
 export async function GET(req: Request) {
@@ -27,87 +51,62 @@ export async function GET(req: Request) {
   }
 
   const out: Record<string, unknown> = { node: process.version };
-  const cs = process.env.DATABASE_URL;
 
-  // 0) Env shape (never the password itself).
-  if (!cs) {
-    out.env = { present: false };
-  } else {
-    try {
-      const u = new URL(cs);
-      out.env = {
-        present: true,
-        length: cs.length,
-        hasWhitespace: /\s/.test(cs),
-        protocol: u.protocol,
-        username: u.username,
-        passwordPresent: Boolean(u.password),
-        passwordLength: u.password.length,
-        host: u.hostname,
-        port: u.port,
-        database: u.pathname,
-        search: u.search,
-      };
-    } catch {
-      out.env = { present: true, parseError: true, length: cs.length };
-    }
-  }
+  const svc = await import("@/lib/services/public-properties");
+  const { parseSearchParams } = await import("@/lib/validations/search");
+  const { prisma } = await import("@/lib/prisma");
 
-  // 1) WASM compiler module import (same asset the generated client loads).
-  try {
-    const spec = [
-      "@prisma/client/runtime/",
-      "query_compiler_fast_bg.postgresql.wasm-base64.mjs",
-    ].join("");
-    const m: { wasm?: unknown } = await import(spec);
-    out.wasmImport = {
-      ok: true,
-      wasmType: typeof m.wasm,
-      wasmLength: typeof m.wasm === "string" ? m.wasm.length : null,
-    };
-  } catch (e) {
-    out.wasmImport = { ok: false, ...describe(e) };
-  }
+  // Controls (known-good on home page).
+  out.count = await attempt(
+    () => prisma.property.count({ where: { status: "APPROVED" } }),
+    (n) => n
+  );
+  out.featured = await attempt(
+    () => svc.getFeaturedProperties(8),
+    (rows) => rows.length
+  );
 
-  // 2) Raw pg, exactly like the app connects.
-  async function pgTest(extra: Record<string, unknown>) {
-    const { Client } = await import("pg");
-    const client = new Client({
-      connectionString: cs,
-      connectionTimeoutMillis: 8000,
-      ...extra,
-    });
-    await client.connect();
-    try {
-      const r = await client.query(
-        'select count(*)::int as n from "Property"'
+  // The /properties query, decomposed.
+  out.findManySkipNoInclude = await attempt(
+    () =>
+      prisma.property.findMany({
+        where: { status: "APPROVED" },
+        orderBy: { createdAt: "desc" },
+        skip: 0,
+        take: 12,
+      }),
+    (rows) => rows.length
+  );
+  out.findManySkipWithInclude = await attempt(
+    () =>
+      prisma.property.findMany({
+        where: { status: "APPROVED" },
+        orderBy: { createdAt: "desc" },
+        skip: 0,
+        take: 12,
+        include: svc.propertyCardInclude,
+      }),
+    (rows) => rows.length
+  );
+  out.searchProperties = await attempt(
+    () => svc.searchProperties(parseSearchParams({})),
+    (r) => ({ total: r.total, shown: r.properties.length })
+  );
+
+  // The detail-page queries.
+  const detail = await attempt(
+    () => svc.getPublicProperty(DETAIL_ID),
+    (p) => (p ? p.title : null)
+  );
+  out.getPublicProperty = detail;
+  if (detail.ok) {
+    const p = await svc.getPublicProperty(DETAIL_ID);
+    if (p) {
+      out.getSimilarProperties = await attempt(
+        () => svc.getSimilarProperties(p),
+        (rows) => rows.length
       );
-      return { ok: true, properties: r.rows[0].n as number };
-    } finally {
-      await client.end().catch(() => undefined);
     }
-  }
-
-  try {
-    out.rawPg = await pgTest({});
-  } catch (e) {
-    out.rawPg = { ok: false, ...describe(e) };
-  }
-
-  // 3) Raw pg with certificate verification disabled (isolates TLS verify).
-  try {
-    out.rawPgNoVerify = await pgTest({ ssl: { rejectUnauthorized: false } });
-  } catch (e) {
-    out.rawPgNoVerify = { ok: false, ...describe(e) };
-  }
-
-  // 4) Real Prisma query through the app's client.
-  try {
-    const { prisma } = await import("@/lib/prisma");
-    const n = await prisma.property.count();
-    out.prisma = { ok: true, properties: n };
-  } catch (e) {
-    out.prisma = { ok: false, ...describe(e) };
   }
 
   return NextResponse.json(out, { status: 200 });
