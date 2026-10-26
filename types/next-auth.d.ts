@@ -23,5 +23,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: Role;
+    /** Last DB re-validation of status/role (Phase 11), ms epoch. */
+    statusCheckedAt?: number;
   }
 }

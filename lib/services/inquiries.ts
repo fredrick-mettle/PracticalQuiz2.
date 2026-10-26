@@ -4,6 +4,7 @@ import {
   replyMessageSchema,
 } from "@/lib/validations/inquiry";
 import { notifyInquiryMessage } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 import type { InquiryStatus } from "@/lib/generated/prisma/enums";
 
 /**
@@ -45,6 +46,14 @@ export async function createInquiry(
     return {
       success: false,
       message: parsed.error.issues[0]?.message ?? "Invalid message",
+    };
+  }
+
+  // Spam guard (Phase 11): generous for humans, useless for bots.
+  if (!rateLimit(`inquiry:${senderId}`, 20, 60 * 60 * 1000).ok) {
+    return {
+      success: false,
+      message: "You're sending inquiries very quickly. Please slow down and try again in a little while.",
     };
   }
 

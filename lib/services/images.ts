@@ -11,6 +11,7 @@ import {
   type UploadSignature,
 } from "@/lib/cloudinary";
 import { MAX_IMAGES_PER_PROPERTY } from "@/lib/constants";
+import { rateLimit } from "@/lib/rate-limit";
 import type { PropertyImage } from "@/lib/generated/prisma/client";
 
 /**
@@ -58,6 +59,15 @@ export async function createPropertyUploadSignature(
 
   const property = await getOwnedProperty(ownerId, propertyId);
   if (!property) return NOT_FOUND;
+
+  // Signatures let the holder upload to our Cloudinary account — cap how
+  // many one agent can mint (Phase 11).
+  if (!rateLimit(`upload-signature:${ownerId}`, 100, 60 * 60 * 1000).ok) {
+    return {
+      success: false,
+      message: "Too many upload requests. Please wait a while and try again.",
+    };
+  }
 
   const count = await prisma.propertyImage.count({
     where: { propertyId: property.id },

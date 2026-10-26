@@ -336,10 +336,46 @@ sends it back to `PENDING` for re-moderation, so agents can't swap content
 after approval. The edit page warns about this. Photo-only changes don't
 trigger re-review.
 
-Known limitations: sessions are JWTs, so a suspension blocks the *next*
-sign-in — an already-logged-in user keeps their session until it expires;
+Known limitation (session revocation was added in Phase 11 — see below):
 suspending an agent doesn't unpublish their listings (moderate or delete
 them separately).
+
+## Security & quality (Phase 11)
+
+- **Security headers + CSP** on every response (`next.config.mjs`):
+  a Content-Security-Policy whitelisting only our origin, Unsplash,
+  Cloudinary and OpenStreetMap tiles, plus `nosniff`, strict
+  Referrer-Policy and a locked-down Permissions-Policy. Production adds
+  HSTS and clickjacking protection (`frame-ancestors 'none'` +
+  `X-Frame-Options: DENY`); those two are omitted in dev so the
+  iframe-embedded cloud preview keeps working. Dev CSP additionally
+  allows `unsafe-eval`/websockets for HMR. (`script-src 'unsafe-inline'`
+  remains for Next.js's inline flight scripts — nonce-based CSP is the
+  documented next step.)
+- **Rate limiting** (`lib/rate-limit.ts`, in-memory sliding window):
+  login 10 attempts / 15 min per IP+email and 30 / 15 min per IP;
+  registration 5/hour per IP; inquiries 20/hour per user; Cloudinary
+  upload signatures 100/hour per agent. Blocked attempts don't extend
+  the lockout. Swap the Map for Redis if the app ever runs on multiple
+  instances.
+- **Session hardening:** the JWT re-validates account status/role
+  against the database every 5 minutes, so suspending/banning (or
+  deleting) a user now ends their live session — not just their next
+  sign-in — and role changes propagate without a fresh login. Sessions
+  expire after 7 days (was the 30-day default). Unknown-email logins
+  run a dummy bcrypt comparison so timing doesn't reveal whether an
+  account exists. Middleware and `getCurrentUser` treat a claimless
+  token as signed out.
+- **Audit:** no `dangerouslySetInnerHTML` anywhere; Leaflet popup HTML
+  escapes every dynamic value; `passwordHash` is only touched inside
+  the auth service; login `callbackUrl` only accepts same-origin paths
+  (now also rejecting the `/\` protocol-relative trick); registration
+  reveals duplicate emails (UX choice — blunted by the rate limit).
+- **Tests:** Vitest unit suite in `tests/` (`npm test`) — 42 tests over
+  the Zod schemas (cross-field property rules, no-ADMIN self-registration,
+  moderation reasons, Cloudinary URL pinning), search-param parsing,
+  constants/labels, formatting helpers and the rate limiter. `npm run
+  lint` and `tsc --noEmit` are clean.
 
 ## Progress
 
@@ -353,7 +389,7 @@ them separately).
 - [x] **Phase 8 — Inquiries & email:** threaded tenant/agent inboxes, NEW→READ→REPLIED→CLOSED flow, Resend notifications (graceful unconfigured mode)
 - [x] **Phase 9 — Favorites:** optimistic heart toggles everywhere, saved-properties page with no-longer-available handling
 - [x] **Phase 10 — Admin panel:** stats overview, FIFO moderation queue with rejection reasons + owner emails, full listing oversight & delete, user suspend/ban, re-moderation when a live listing is edited
-- [ ] Phase 11 — Security & quality
+- [x] **Phase 11 — Security & quality:** CSP + security headers, rate limiting on auth/inquiries/uploads, live-session revocation for suspended users, timing-safe login, 42-test Vitest suite, clean lint/types
 - [ ] Phase 12 — Deployment
 
 <!-- Screenshots will be added as features land. -->

@@ -36,7 +36,9 @@ export async function middleware(req: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  if (!token) {
+  // No id claim = no (or revoked) session — see the jwt callback in
+  // lib/auth.ts, which strips claims for suspended/deleted accounts.
+  if (!token?.id) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);

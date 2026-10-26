@@ -15,7 +15,9 @@ const errorClass = "mt-1 text-sm text-red-600";
 
 /** Only allow in-app redirect targets (prevents open-redirect abuse). */
 function safeCallbackUrl(raw: string | null): string | null {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  // Only same-origin absolute paths. "//" and "/\" can be interpreted as
+  // protocol-relative URLs by some browsers → open redirect.
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
   return raw;
 }
 
