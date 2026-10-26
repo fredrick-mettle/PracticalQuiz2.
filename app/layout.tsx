@@ -1,0 +1,52 @@
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import { Navbar } from "@/components/layout/navbar";
+import "./globals.css";
+
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
+
+export const metadata: Metadata = {
+  title: {
+    default: "RentGH — Ghana Rental & Property Finder",
+    template: "%s | RentGH",
+  },
+  description:
+    "Find houses, apartments, rooms, hostels and land for rent or sale across all 16 regions of Ghana.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} bg-white text-slate-900 antialiased`}
+      >
+        <Navbar />
+        <div className="min-h-[calc(100vh-9rem)]">{children}</div>
+        <footer className="border-t border-slate-200 bg-slate-50">
+          <div className="mx-auto flex max-w-7xl flex-col items-center gap-1 px-4 py-6 text-center text-sm text-slate-500 sm:px-6">
+            <p className="font-semibold text-slate-700">
+              Rent<span className="text-emerald-700">GH</span>
+            </p>
+            <p>
+              Find your next home in Ghana — houses, apartments, rooms,
+              hostels and land across all 16 regions.
+            </p>
+          </div>
+        </footer>
+      </body>
+    </html>
+  );
+}
