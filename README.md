@@ -377,6 +377,44 @@ them separately).
   constants/labels, formatting helpers and the rate limiter. `npm run
   lint` and `tsc --noEmit` are clean.
 
+## Deployment (Phase 12)
+
+RentGH runs on **Vercel** (app, London `lhr1` — close to Ghana and to the
+database) + **Supabase Postgres** (database, `eu-west-1`), both on free tiers.
+
+**Environment variables** (Vercel → Project → Settings → Environment
+Variables; never commit real values):
+
+| Variable | Required | Notes |
+| -------- | -------- | ----- |
+| `DATABASE_URL` | ✅ | Supabase → Connect → **Session pooler** connection string |
+| `NEXTAUTH_SECRET` | ✅ | `openssl rand -base64 32` — unique per environment |
+| `NEXTAUTH_URL` | ✅ | Public site URL, e.g. `https://rentgh-….vercel.app` |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | – | Without these, photo uploads are disabled (agents see a notice) |
+| `RESEND_API_KEY` / `EMAIL_FROM` | – | Without these, notification emails are skipped (logged server-side) |
+| `NEXT_IMAGE_UNOPTIMIZED` | 🚫 | Sandbox-dev workaround only — must be unset in production |
+
+**How the database was provisioned:** the two Prisma migrations in
+`prisma/migrations/` were applied to Supabase and recorded in
+`_prisma_migrations` (so `prisma migrate deploy` stays consistent), then the
+database was seeded with the demo data. To reproduce on a normal machine
+with the Supabase `DATABASE_URL` in `.env`, it's simply:
+
+```bash
+npm run db:deploy   # apply migrations
+npm run db:seed     # optional demo data (see warning)
+```
+
+⚠️ **Demo accounts warning:** the seeded users (including
+`admin@rentgh.com`) share the publicly-known password `Password123!` and are
+convenient for demos/marking only. For real use, delete them and create a
+proper admin (register normally, then promote via SQL:
+`UPDATE "User" SET role='ADMIN' WHERE email='you@example.com';`).
+
+**Ongoing deploys:** pushing to `main` triggers a Vercel production deploy;
+other branches get preview URLs. Prisma client generation runs automatically
+via `postinstall`.
+
 ## Progress
 
 - [x] **Phase 1 — Setup:** scaffold, Tailwind, Prisma schema, first migration, seed

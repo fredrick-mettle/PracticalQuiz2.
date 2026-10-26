@@ -19,7 +19,10 @@ function createPrismaClient(): PrismaClient {
       "DATABASE_URL is not set. Copy .env.example to .env and fill it in (see README)."
     );
   }
-  const adapter = new PrismaPg({ connectionString });
+  // Small pool per instance: serverless hosts run many concurrent
+  // instances against a pooled database (Supabase), so keep each pool
+  // modest to stay within the pooler's connection budget.
+  const adapter = new PrismaPg({ connectionString, max: 5 });
   return new PrismaClient({ adapter });
 }
 
