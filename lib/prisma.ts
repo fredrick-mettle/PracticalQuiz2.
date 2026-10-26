@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/lib/generated/prisma/client";
+import { withLibpqSslCompat } from "@/lib/database-url";
 
 /**
  * Singleton Prisma client (Prisma 7, Rust-free WASM query engine).
@@ -21,8 +22,13 @@ function createPrismaClient(): PrismaClient {
   }
   // Small pool per instance: serverless hosts run many concurrent
   // instances against a pooled database (Supabase), so keep each pool
-  // modest to stay within the pooler's connection budget.
-  const adapter = new PrismaPg({ connectionString, max: 5 });
+  // modest to stay within the pooler's connection budget. Production uses
+  // Supabase's transaction pooler (port 6543); session mode's tiny client
+  // cap (15) is exhausted almost immediately by parallel lambdas.
+  const adapter = new PrismaPg({
+    connectionString: withLibpqSslCompat(connectionString),
+    max: 5,
+  });
   return new PrismaClient({ adapter });
 }
 
