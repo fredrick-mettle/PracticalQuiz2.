@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import localFont from "next/font/local";
 import { Navbar } from "@/components/layout/navbar";
 import "./globals.css";
@@ -28,6 +29,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const currentYear = new Date().getFullYear();
+
   return (
     <html lang="en">
       <body
@@ -36,13 +39,30 @@ export default function RootLayout({
         <Navbar />
         <div className="min-h-[calc(100vh-9rem)]">{children}</div>
         <footer className="border-t border-slate-200 bg-slate-50">
-          <div className="mx-auto flex max-w-7xl flex-col items-center gap-1 px-4 py-6 text-center text-sm text-slate-500 sm:px-6">
+          <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-7 text-center text-sm text-slate-500 sm:px-6">
             <p className="font-semibold text-slate-700">
               Rent<span className="text-emerald-700">GH</span>
             </p>
-            <p>
+            <p className="max-w-xl">
               Find your next home in Ghana — houses, apartments, rooms,
               hostels and land across all 16 regions.
+            </p>
+            <nav
+              aria-label="Legal and safety"
+              className="flex flex-wrap justify-center gap-x-5 gap-y-2 font-medium text-slate-600"
+            >
+              <Link href="/safety" className="hover:text-emerald-800 hover:underline">
+                Safety tips
+              </Link>
+              <Link href="/terms" className="hover:text-emerald-800 hover:underline">
+                Terms of Use
+              </Link>
+              <Link href="/privacy" className="hover:text-emerald-800 hover:underline">
+                Privacy Policy
+              </Link>
+            </nav>
+            <p className="text-xs text-slate-400">
+              © {currentYear} RentGH. All rights reserved.
             </p>
           </div>
         </footer>

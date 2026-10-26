@@ -49,7 +49,7 @@ export function InquiryForm({ propertyId, agentName }: InquiryFormProps) {
         <p className="mt-0.5 text-sm leading-6 text-emerald-800">
           {sent.appended
             ? "It was added to your existing conversation with the agent."
-            : `${agentName} has been notified and will reply here.`}{" "}
+            : `${agentName} can now see it in their RentGH inbox.`}{" "}
           <Link
             href={`/inquiries/${sent.inquiryId}`}
             className="font-semibold underline underline-offset-2"
@@ -92,7 +92,7 @@ export function InquiryForm({ propertyId, agentName }: InquiryFormProps) {
         {isSubmitting ? "Sending…" : "Send inquiry"}
       </button>
       <p className="mt-2 text-center text-xs text-slate-500">
-        The agent is notified by email and will reply in RentGH.
+        The agent will see your message in their RentGH inbox.
       </p>
     </form>
   );
