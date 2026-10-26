@@ -237,8 +237,9 @@ RESEND_API_KEY="re_..."
 EMAIL_FROM="RentGH <noreply@yourdomain.com>"
 ```
 
-Resend's free tier only delivers to your own account email until you
-verify a domain — fine for development.
+Until a sending domain is verified in Resend, the shared testing sender
+can impose recipient restrictions. Verify a domain you control before
+depending on email for public users.
 
 **Migration note:** `CLOSED` was added to `InquiryStatus` in
 `20261025230000_add_closed_inquiry_status`. In this offline sandbox the
@@ -392,26 +393,32 @@ Variables; never commit real values):
 | `DATABASE_URL` | ✅ | Supabase → Connect → **Transaction pooler** (port 6543) string + `?sslmode=require`; a dedicated least-privilege role (e.g. `rentgh_app`) is used instead of the `postgres` superuser |
 | `NEXTAUTH_SECRET` | ✅ | `openssl rand -base64 32` — unique per environment |
 | `NEXTAUTH_URL` | ✅ | Public site URL, e.g. `https://rentgh-….vercel.app` |
-| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | – | Without these, photo uploads are disabled (agents see a notice) |
-| `RESEND_API_KEY` / `EMAIL_FROM` | – | Without these, notification emails are skipped (logged server-side) |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Required for photo uploads | Without these, photo uploads are disabled (agents see a notice) |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Required for email notifications | Without these, notification emails are skipped (logged server-side); in-app inquiries still work |
 | `NEXT_IMAGE_UNOPTIMIZED` | 🚫 | Sandbox-dev workaround only — must be unset in production |
 
 **How the database was provisioned:** the two Prisma migrations in
 `prisma/migrations/` were applied to Supabase and recorded in
-`_prisma_migrations` (so `prisma migrate deploy` stays consistent), then the
-database was seeded with the demo data. To reproduce on a normal machine
-with the Supabase `DATABASE_URL` in `.env`, it's simply:
+`_prisma_migrations` (so `prisma migrate deploy` stays consistent).
+Production was initially seeded for Phase 12 verification. During the
+launch lockdown on 26 October 2026, an owner-registered account was
+promoted to ADMIN, the seeded listings were transferred to the owner's
+agent account, and all four production demo accounts were deleted.
+
+To reproduce **locally** on a normal machine with the Supabase
+`DATABASE_URL` in `.env`, it's simply:
 
 ```bash
 npm run db:deploy   # apply migrations
 npm run db:seed     # optional demo data (see warning)
 ```
 
-⚠️ **Demo accounts warning:** the seeded users (including
+⚠️ **Demo accounts warning:** the local seeded users (including
 `admin@rentgh.com`) share the publicly-known password `Password123!` and are
-convenient for demos/marking only. For real use, delete them and create a
-proper admin (register normally, then promote via SQL:
-`UPDATE "User" SET role='ADMIN' WHERE email='you@example.com';`).
+convenient for demos/marking only. **Never seed those users into
+production.** For a real admin, register normally and promote the
+owner's account via SQL:
+`UPDATE "User" SET role='ADMIN' WHERE email='you@example.com';`.
 
 **Supabase + pg production gotchas (learned the hard way):**
 
@@ -429,6 +436,36 @@ proper admin (register normally, then promote via SQL:
 other branches get preview URLs. Prisma client generation runs automatically
 via `postinstall`.
 
+### Launch integrations requiring owner accounts
+
+These secrets belong only in the provider and Vercel dashboards. Do not post
+them in chat, commit them, or place real values in `.env.example`.
+
+**Cloudinary (enables property photo uploads):**
+
+1. Create a free Cloudinary account and open the Console.
+2. Copy the Cloud name, API Key, and API Secret from the dashboard/API Keys
+   settings.
+3. In Vercel → `rentgh` → Settings → Environment Variables, add
+   `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and
+   `CLOUDINARY_API_SECRET` for Production (and Preview if desired). Enter raw
+   values with no surrounding quotes and mark the secret values sensitive.
+4. Redeploy, sign in as an AGENT, edit a listing, and upload a real JPG, PNG,
+   or WebP photo to verify it appears after moderation.
+
+**Resend (enables inquiry and moderation emails):**
+
+1. Create a Resend account and an API key with sending access.
+2. For a first self-test, `EMAIL_FROM="RentGH <onboarding@resend.dev>"` can
+   be used, but Resend testing restrictions may limit recipients. For public
+   users, verify a domain controlled by RentGH and use an address on it, for
+   example `RentGH <noreply@your-verified-domain>`.
+3. In Vercel, add `RESEND_API_KEY` and `EMAIL_FROM`, then redeploy.
+4. Verify with one real inquiry/reply and check both the RentGH inbox and the
+   recipient mailbox/spam folder.
+
+The public launch pages are `/safety`, `/terms`, and `/privacy`.
+
 ## Progress
 
 - [x] **Phase 1 — Setup:** scaffold, Tailwind, Prisma schema, first migration, seed
@@ -441,7 +478,7 @@ via `postinstall`.
 - [x] **Phase 8 — Inquiries & email:** threaded tenant/agent inboxes, NEW→READ→REPLIED→CLOSED flow, Resend notifications (graceful unconfigured mode)
 - [x] **Phase 9 — Favorites:** optimistic heart toggles everywhere, saved-properties page with no-longer-available handling
 - [x] **Phase 10 — Admin panel:** stats overview, FIFO moderation queue with rejection reasons + owner emails, full listing oversight & delete, user suspend/ban, re-moderation when a live listing is edited
-- [x] **Phase 11 — Security & quality:** CSP + security headers, rate limiting on auth/inquiries/uploads, live-session revocation for suspended users, timing-safe login, 42-test Vitest suite, clean lint/types
-- [x] **Phase 12 — Deployment:** live on Vercel (`lhr1`) + Supabase Postgres (`eu-west-1`) at https://rentgh-iota.vercel.app — migrations + demo seed in production, transaction-pooler + libpq SSL-compat fixes, public pages smoke-tested end-to-end
+- [x] **Phase 11 — Security & quality:** CSP + security headers, rate limiting on auth/inquiries/uploads, live-session revocation for suspended users, timing-safe login, 52-test Vitest suite, clean lint/types
+- [x] **Phase 12 — Deployment:** live on Vercel (`lhr1`) + Supabase Postgres (`eu-west-1`) at https://rentgh-iota.vercel.app — transaction-pooler + libpq SSL-compat fixes, production demo accounts removed with listings transferred to the owner agent account, Terms/Privacy/Safety pages added, public pages smoke-tested end-to-end
 
 <!-- Screenshots will be added as features land. -->

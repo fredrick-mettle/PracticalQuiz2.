@@ -330,6 +330,14 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               <li>Never send money in advance for a home you have not seen.</li>
               <li>Meet the agent at the property or a safe public place.</li>
             </ul>
+            <p className="mt-3 text-sm">
+              <Link
+                href="/safety"
+                className="font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-950"
+              >
+                Read the full RentGH safety guide
+              </Link>
+            </p>
           </div>
         </aside>
       </div>
