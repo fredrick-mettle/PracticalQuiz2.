@@ -382,12 +382,14 @@ them separately).
 RentGH runs on **Vercel** (app, London `lhr1` — close to Ghana and to the
 database) + **Supabase Postgres** (database, `eu-west-1`), both on free tiers.
 
+**Live:** https://rentgh-iota.vercel.app
+
 **Environment variables** (Vercel → Project → Settings → Environment
 Variables; never commit real values):
 
 | Variable | Required | Notes |
 | -------- | -------- | ----- |
-| `DATABASE_URL` | ✅ | Supabase → Connect → **Session pooler** connection string |
+| `DATABASE_URL` | ✅ | Supabase → Connect → **Transaction pooler** (port 6543) string + `?sslmode=require`; a dedicated least-privilege role (e.g. `rentgh_app`) is used instead of the `postgres` superuser |
 | `NEXTAUTH_SECRET` | ✅ | `openssl rand -base64 32` — unique per environment |
 | `NEXTAUTH_URL` | ✅ | Public site URL, e.g. `https://rentgh-….vercel.app` |
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | – | Without these, photo uploads are disabled (agents see a notice) |
@@ -411,6 +413,18 @@ convenient for demos/marking only. For real use, delete them and create a
 proper admin (register normally, then promote via SQL:
 `UPDATE "User" SET role='ADMIN' WHERE email='you@example.com';`).
 
+**Supabase + pg production gotchas (learned the hard way):**
+
+- Use the **transaction pooler (6543)**, not session mode (5432), on
+  serverless: free-tier session mode caps clients at 15, and a handful of
+  warm Vercel instances exhaust it (`EMAXCONNSESSION`).
+- Current `pg` treats `sslmode=require` as **verify-full**, but Supabase's
+  pooler certificate chains to Supabase's own root CA, which Node doesn't
+  trust. `lib/database-url.ts` appends `uselibpqcompat=true` for
+  `prefer`/`require`/`verify-ca` so connections stay encrypted with libpq
+  semantics; explicit `verify-full` is left alone for deployments that pin
+  the Supabase CA.
+
 **Ongoing deploys:** pushing to `main` triggers a Vercel production deploy;
 other branches get preview URLs. Prisma client generation runs automatically
 via `postinstall`.
@@ -428,6 +442,6 @@ via `postinstall`.
 - [x] **Phase 9 — Favorites:** optimistic heart toggles everywhere, saved-properties page with no-longer-available handling
 - [x] **Phase 10 — Admin panel:** stats overview, FIFO moderation queue with rejection reasons + owner emails, full listing oversight & delete, user suspend/ban, re-moderation when a live listing is edited
 - [x] **Phase 11 — Security & quality:** CSP + security headers, rate limiting on auth/inquiries/uploads, live-session revocation for suspended users, timing-safe login, 42-test Vitest suite, clean lint/types
-- [ ] Phase 12 — Deployment
+- [x] **Phase 12 — Deployment:** live on Vercel (`lhr1`) + Supabase Postgres (`eu-west-1`) at https://rentgh-iota.vercel.app — migrations + demo seed in production, transaction-pooler + libpq SSL-compat fixes, public pages smoke-tested end-to-end
 
 <!-- Screenshots will be added as features land. -->
