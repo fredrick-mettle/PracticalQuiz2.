@@ -4,6 +4,7 @@ import {
   LegalPage,
   LegalSection,
   SupportEmailLink,
+  SupportPhoneLink,
 } from "@/components/legal/legal-page";
 
 export const metadata: Metadata = {
@@ -105,9 +106,10 @@ export default function SafetyPage() {
 
       <LegalSection title="Report a suspicious listing or user">
         <p>
-          Email <SupportEmailLink /> with the listing link, the account or
-          phone number involved, screenshots, dates, and payment references if
-          money was sent. Do not send your RentGH password.
+          Call <SupportPhoneLink /> or email <SupportEmailLink /> with the
+          listing link, the account or phone number involved, screenshots,
+          dates, and payment references if money was sent. Do not send your
+          RentGH password.
         </p>
         <p>
           If money has already been sent, contact your bank or mobile money

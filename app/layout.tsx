@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import localFont from "next/font/local";
 import { Navbar } from "@/components/layout/navbar";
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE_DISPLAY,
+  SUPPORT_PHONE_TEL,
+} from "@/components/legal/legal-page";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -61,6 +66,22 @@ export default function RootLayout({
                 Privacy Policy
               </Link>
             </nav>
+            <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+              <span className="font-medium text-slate-600">Support:</span>
+              <a
+                href={`tel:${SUPPORT_PHONE_TEL}`}
+                className="font-medium text-emerald-700 hover:underline"
+              >
+                {SUPPORT_PHONE_DISPLAY}
+              </a>
+              <span aria-hidden="true">·</span>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}`}
+                className="font-medium text-emerald-700 hover:underline"
+              >
+                {SUPPORT_EMAIL}
+              </a>
+            </p>
             <p className="text-xs text-slate-400">
               © {currentYear} RentGH. All rights reserved.
             </p>
