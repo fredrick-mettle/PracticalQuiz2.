@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 export const SUPPORT_EMAIL = "oforimettlefredrick@gmail.com";
-export const LEGAL_LAST_UPDATED = "26 October 2026";
+export const SUPPORT_PHONE_DISPLAY = "054 112 2652";
+export const SUPPORT_PHONE_TEL = "+233541122652";
+export const LEGAL_LAST_UPDATED = "29 October 2026";
 
 interface LegalPageProps {
   eyebrow: string;
@@ -18,6 +20,17 @@ export function SupportEmailLink() {
       className="font-semibold text-emerald-800 underline-offset-2 hover:underline"
     >
       {SUPPORT_EMAIL}
+    </a>
+  );
+}
+
+export function SupportPhoneLink() {
+  return (
+    <a
+      href={`tel:${SUPPORT_PHONE_TEL}`}
+      className="font-semibold text-emerald-800 underline-offset-2 hover:underline"
+    >
+      {SUPPORT_PHONE_DISPLAY}
     </a>
   );
 }
@@ -44,9 +57,10 @@ export function LegalPage({ eyebrow, title, intro, children }: LegalPageProps) {
             Contact RentGH
           </h2>
           <p className="mt-2 text-sm leading-6 text-emerald-900">
-            For account, privacy, safety, or listing concerns, email{" "}
-            <SupportEmailLink />. Include the listing link and enough detail
-            for the administrator to identify the issue.
+            For account, privacy, safety, or listing concerns, call{" "}
+            <SupportPhoneLink /> or email <SupportEmailLink />. Include the
+            listing link and enough detail for the administrator to identify
+            the issue.
           </p>
           <nav
             aria-label="Legal and safety pages"
